@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#005a30">
+  <meta name="description" content="Volunteer tasks, locations, equipment and difficulty for 2027.">
+  <title>Volunteer Plan 2027</title>
+
+  <link rel="preload" href="./fonts/NationalTrustTT-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="./tokens.css">
+  <link rel="stylesheet" href="./base.css">
+  <link rel="stylesheet" href="./calendar.css">
+  <link rel="stylesheet" href="./styles.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="Volunteer Plan 2027, back to top">
+        <span class="brand-mark" aria-hidden="true"><i data-lucide="sprout"></i></span>
+        <span class="brand-title">Volunteer Plan 2027</span>
+      </a>
+      <button class="button button-quiet button-icon" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Toggle theme">
+        <i data-lucide="moon" aria-hidden="true"></i><span class="sr-only">Toggle theme</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="main-content" class="container page">
+    <!-- Next volunteer day: filled in by app.js from the schedule and today's date. -->
+    <section class="next-day reveal" id="top" data-state="loading" aria-labelledby="next-heading" aria-busy="true">
+      <div class="next-hero on-dark">
+        <span class="hero-hills" aria-hidden="true"></span>
+        <div class="next-hero-copy">
+          <h1 class="eyebrow" id="next-heading">Next volunteer day</h1>
+          <p class="next-title" id="next-title">Loading…</p>
+          <p class="next-when"><span id="next-date"></span><span class="countdown" id="next-countdown" hidden></span><span class="preview-chip" id="next-preview" hidden></span></p>
+          <ul class="next-meta" id="next-meta" hidden>
+            <li><i data-lucide="map-pin" aria-hidden="true"></i><span id="next-location"></span></li>
+            <li><i data-lucide="clock-3" aria-hidden="true"></i><span id="next-time"></span></li>
+            <li><span id="next-difficulty" class="difficulty-badge badge-moderate"></span></li>
+          </ul>
+          <p class="next-note" id="next-note" hidden></p>
+        </div>
+      </div>
+
+      <div class="next-body" id="next-body">
+        <div class="next-info reveal" style="--i:1">
+          <p class="next-description" id="next-description"></p>
+          <div id="next-also" class="next-also" hidden></div>
+          <h2 class="block-title">What to bring</h2>
+          <div id="next-equipment" class="equipment-list"></div>
+        </div>
+
+        <div class="weather reveal" id="next-weather" style="--i:2" hidden aria-live="polite"></div>
+
+        <div class="next-map-block reveal" style="--i:3">
+          <h2 class="block-title">Where</h2>
+          <div id="next-map" class="event-map next-map" role="region" aria-label="Map showing the next volunteer day's location"><div class="map-placeholder">Finding this location on the map…</div></div>
+          <div class="map-actions">
+            <a id="next-directions" class="button button-primary button-lg" href="#" target="_blank" rel="noopener noreferrer"><i data-lucide="navigation" aria-hidden="true"></i><span>Get directions</span></a>
+            <div class="map-links">
+              <a id="next-directions-apple" class="text-link" href="#" target="_blank" rel="noopener noreferrer">Apple Maps</a>
+              <a id="next-directions-osm" class="text-link" href="#" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+              <button id="next-copy-coords" class="text-link text-button" type="button" hidden><i data-lucide="copy" aria-hidden="true"></i><span id="next-coords"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="next-actions reveal" style="--i:4">
+          <button class="button" id="next-ics" type="button"><i data-lucide="calendar-plus" aria-hidden="true"></i><span>Add to calendar</span></button>
+          <a class="button" href="./volunteer-schedule.pdf" download="volunteer-schedule.pdf" id="pdf-download"><i data-lucide="file-down" aria-hidden="true"></i><span>Download PDF Schedule</span></a>
+          <button class="button button-quiet" id="next-share" type="button"><i data-lucide="share-2" aria-hidden="true"></i><span>Share</span></button>
+        </div>
+
+        <div class="coming-up reveal" id="next-upcoming" style="--i:5" hidden>
+          <h2 class="block-title">Then coming up</h2>
+          <ul class="coming-list" id="coming-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel calendar-panel reveal" style="--i:2" aria-labelledby="calendar-heading">
+      <h2 id="calendar-heading" class="sr-only">Calendar</h2>
+      <div class="calendar-tools">
+        <button class="button button-quiet" id="download-all-ics" type="button" disabled><i data-lucide="calendar-plus" aria-hidden="true"></i><span>Add all dates to my calendar</span></button>
+        <div class="calendar-legend" aria-label="Difficulty legend">
+          <span><i class="legend-dot easy"></i>Easy</span>
+          <span><i class="legend-dot moderate"></i>Moderate</span>
+          <span><i class="legend-dot strenuous"></i>Strenuous</span>
+        </div>
+      </div>
+      <div id="calendar" aria-label="Scheduled volunteer dates calendar"></div>
+    </section>
+
+    <section class="panel directory-panel reveal" style="--i:3" aria-labelledby="directory-heading">
+      <h2 id="directory-heading" class="section-title">Tasks by location</h2>
+      <div class="filter-bar" role="search" aria-label="Filter tasks">
+        <label class="search-control" for="task-search">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input id="task-search" type="search" placeholder="Search tasks, locations or equipment" autocomplete="off">
+        </label>
+        <label class="select-control" for="location-filter"><span class="sr-only">Filter by location</span>
+          <i data-lucide="map-pin" aria-hidden="true"></i>
+          <select id="location-filter"><option value="">All locations</option></select>
+        </label>
+        <label class="select-control" for="difficulty-filter"><span class="sr-only">Filter by difficulty</span>
+          <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+          <select id="difficulty-filter">
+            <option value="">All difficulty levels</option><option value="Easy">Easy</option><option value="Moderate">Moderate</option><option value="Strenuous">Strenuous</option>
+          </select>
+        </label>
+        <button class="button button-quiet" type="button" id="clear-filters">Clear</button>
+      </div>
+      <p class="directory-meta" id="directory-result-count" aria-live="polite">Loading tasks…</p>
+      <div id="task-directory" class="task-directory" aria-live="polite">
+        <div class="empty-state"><span class="empty-icon"><i data-lucide="calendar-clock" aria-hidden="true"></i></span><p>Loading scheduled tasks…</p></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="event-modal" aria-hidden="true" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-date">
+      <header class="modal-header">
+        <div>
+          <h2 id="modal-title">Task details</h2>
+          <p class="modal-sub"><i data-lucide="calendar-days" aria-hidden="true"></i><span id="modal-date"></span></p>
+        </div>
+        <button class="button button-quiet button-icon" type="button" id="close-modal" aria-label="Close task details"><i data-lucide="x" aria-hidden="true"></i></button>
+      </header>
+      <div class="modal-body">
+        <div class="modal-facts">
+          <div class="fact-item"><span class="fact-icon"><i data-lucide="clock-3" aria-hidden="true"></i></span><div><span class="fact-label">Duration</span><strong id="modal-duration">All day</strong></div></div>
+          <div class="fact-item"><span class="fact-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><span class="fact-label">Location</span><strong id="modal-location">—</strong></div></div>
+          <div class="fact-item"><span class="fact-icon"><i data-lucide="gauge" aria-hidden="true"></i></span><div><span class="fact-label">Difficulty</span><strong id="modal-difficulty-wrap"><span id="modal-difficulty" class="difficulty-badge badge-moderate">Moderate</span></strong></div></div>
+        </div>
+        <div class="steps steps-icons">
+          <section class="step" aria-labelledby="description-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="file-text"></i></span><div class="step-head"><h3 id="description-heading">About this task</h3></div><p id="modal-description" class="detail-description">No description provided.</p></section>
+          <section class="step" aria-labelledby="equipment-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="backpack"></i></span><div class="step-head"><h3 id="equipment-heading">What to bring</h3></div><div id="modal-equipment" class="equipment-list"><span class="muted-copy">No equipment listed.</span></div></section>
+          <section class="step" aria-labelledby="map-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="map"></i></span><div class="step-head"><h3 id="map-heading">Where</h3><a id="map-directions" class="text-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Get directions <i data-lucide="external-link" aria-hidden="true"></i></a></div><div id="event-map" class="event-map" role="region" aria-label="Map showing task location"><div class="map-placeholder">The location map will appear here.</div></div></section>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button class="button button-ghost" type="button" id="modal-close-secondary">Close</button>
+        <button class="button button-primary button-lg" type="button" id="download-event-ics"><i data-lucide="calendar-plus" aria-hidden="true"></i> Add to My Calendar</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

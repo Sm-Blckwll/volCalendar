@@ -1,0 +1,144 @@
+/* ==========================================================================
+   Design tokens — shared by the Manager dashboard and the Volunteer portal.
+   This file is identical in both folders. Edit values here (light = :root,
+   dark = html.dark) and both apps follow.
+   ========================================================================== */
+
+/* Typeface extracted from nt-font.js ("National Trust TT", Regular 400 only). */
+@font-face {
+  font-family: "National Trust TT";
+  src: url("fonts/NationalTrustTT-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Typography ----------------------------------------------------------- */
+  --font-display: "National Trust TT", Georgia, "Times New Roman", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --text-xs: .75rem;    /* 12 */
+  --text-sm: .875rem;   /* 14 */
+  --text-base: 1rem;    /* 16 */
+  --text-md: 1.125rem;  /* 18 */
+  --text-lg: 1.375rem;  /* 22 */
+  --text-xl: 1.75rem;   /* 28 */
+  --text-2xl: clamp(2rem, 1.35rem + 2.6vw, 3.25rem);
+  --leading-tight: 1.2;
+  --leading-body: 1.55;
+
+  /* Spacing scale (4px base) ---------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --control-h: 44px;       /* touch-friendly control height */
+
+  /* Shape: one radius ------------------------------------------------------ */
+  --radius: 8px;           /* cards, inputs, buttons, chips, modals, calendar */
+  --radius-sm: 4px;        /* tiny elements only (badges) */
+  --radius-full: 50%;      /* genuine circles: dots, avatars */
+
+  /* Brand + surfaces (light) ----------------------------------------------- */
+  --brand: #00793e;
+  --brand-hover: #005f30;
+  --brand-text: #00793e;
+  --on-brand: #ffffff;
+  --brand-tint: #e8f3ed;
+  --focus: #00793e;
+
+  --page: #f7f5f5;
+  --header: #ffffff;
+  --surface: #ffffff;
+  --surface-alt: #f7f5f5;
+  --border: #dcdcdc;
+  --border-soft: #ebe8e8;
+  --field-border: #767676;
+  --heading: #212121;
+  --text: #212121;
+  --text-muted: #595959;
+
+  /* Hero banner */
+  --hero: #005a30;
+  --hero-far: #0a7a48;
+  --hero-near: #006438;
+  --hero-front: #00492a;
+  --hero-text: #ffffff;
+  --hero-sun: #f4e3b0;
+  --hero-glow: rgba(244, 227, 176, .42);
+
+  /* Difficulty */
+  --easy-bg: #e6f4ec;     --easy-text: #0a4d28;     --easy-edge: #2f8f5b;
+  --moderate-bg: #fbf1d9; --moderate-text: #5a3d0b; --moderate-edge: #c28a1e;
+  --strenuous-bg: #fbe9e4; --strenuous-text: #7a2415; --strenuous-edge: #b8452d;
+  --danger: #b3261e;
+  --danger-bg: #fdecea;
+
+  /* Elevation -------------------------------------------------------------- */
+  --shadow-1: 0 1px 2px rgba(33, 33, 33, .06), 0 1px 3px rgba(33, 33, 33, .08);
+  --shadow-2: 0 6px 16px rgba(33, 33, 33, .12), 0 1px 3px rgba(33, 33, 33, .08);
+  --shadow-3: 0 24px 48px rgba(33, 33, 33, .28);
+  --scrim: rgba(33, 33, 33, .6);
+  --map-filter: grayscale(.25);
+
+  /* Motion ----------------------------------------------------------------- */
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 480ms;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --ease-inout: cubic-bezier(.65, 0, .35, 1);
+  --stagger: 70ms;
+
+  /* Layering --------------------------------------------------------------- */
+  --z-header: 20;
+  --z-popover: 40;
+  --z-modal: 100;
+  --z-dialog: 110;
+  --z-toast: 120;
+  --z-skip: 200;
+}
+
+html.dark {
+  color-scheme: dark;
+  --brand: #4cc38a;
+  --brand-hover: #6fd6a3;
+  --brand-text: #4cc38a;
+  --on-brand: #0b1f15;
+  --brand-tint: #1f3328;
+  --focus: #ffffff;
+
+  --page: #212121;
+  --header: #212121;
+  --surface: #2b2b2b;
+  --surface-alt: #262626;
+  --border: #555555;
+  --border-soft: #3d3d3d;
+  --field-border: #8a8a8a;
+  --heading: #ffffff;
+  --text: #e0e0e0;
+  --text-muted: #bdbdbd;
+
+  --hero: #033d25;
+  --hero-far: #05502f;
+  --hero-near: #04442a;
+  --hero-front: #02321d;
+  --hero-sun: #e9d9a6;
+  --hero-glow: rgba(233, 217, 166, .3);
+
+  --easy-bg: #1d3a2a;     --easy-text: #bfe8cf;     --easy-edge: #4cc38a;
+  --moderate-bg: #3d3216; --moderate-text: #f6dd9c; --moderate-edge: #e0b04a;
+  --strenuous-bg: #4a2219; --strenuous-text: #fbcfc2; --strenuous-edge: #f2937d;
+  --danger: #ff8a80;
+  --danger-bg: #4a2220;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-2: 0 6px 16px rgba(0, 0, 0, .45);
+  --shadow-3: 0 24px 48px rgba(0, 0, 0, .6);
+  --scrim: rgba(0, 0, 0, .7);
+  --map-filter: brightness(.8) grayscale(.35);
+}

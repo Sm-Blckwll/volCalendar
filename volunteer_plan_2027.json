@@ -1,0 +1,86 @@
+[
+  {
+    "id": "task_1759f9cd-33a2-4282-9ffe-e3a3f9a0ea5e",
+    "title": "Path work",
+    "start": "2027-01-06",
+    "allDay": true,
+    "extendedProps": {
+      "location": "Brownsham",
+      "description": "Repairing and surfacing paths to improve presentation and safety for visitors.",
+      "equipment": "Sturdy boots, Waterproofs",
+      "difficulty": "Moderate"
+    }
+  },
+  {
+    "id": "task_15b004fc-3e17-455b-b989-33d137e0aeef",
+    "title": "Hedge laying",
+    "start": "2027-01-14",
+    "allDay": true,
+    "extendedProps": {
+      "location": "East Titchberry",
+      "description": "Traditional hedge laying to improve field boundaries and habitats.",
+      "equipment": "Sturdy boots, Waterproofs, Packed lunch",
+      "difficulty": "Strenuous"
+    }
+  },
+  {
+    "id": "task_9b781d5e-da2d-4db6-9c33-9290a859311e",
+    "title": "Wildlife Survey",
+    "start": "2027-01-29",
+    "allDay": true,
+    "extendedProps": {
+      "location": "Dunsland",
+      "description": "Surveying wildlife and recording species across the site.",
+      "equipment": "Sturdy boots, Waterproofs, Packed lunch",
+      "difficulty": "Easy"
+    }
+  },
+  {
+    "id": "task_d59d2fd7-abd2-47f1-9948-30fb724b2f8b",
+    "title": "Path work",
+    "start": "2027-03-10",
+    "allDay": true,
+    "extendedProps": {
+      "location": "Brownsham",
+      "description": "Repairing and surfacing paths to improve presentation and safety for visitors.",
+      "equipment": "Sturdy boots, Waterproofs",
+      "difficulty": "Moderate"
+    }
+  },
+  {
+    "id": "task_cf011455-aba8-440d-ad87-947c6e9f3879",
+    "title": "Bracken bash",
+    "start": "2027-03-26",
+    "allDay": true,
+    "extendedProps": {
+      "location": "East Titchberry",
+      "description": "Clear areas of bracken to increase the diversity of wildflowers and micro habitats available for insects.",
+      "equipment": "Sturdy boots, Waterproofs, Packed lunch",
+      "difficulty": "Moderate"
+    }
+  },
+  {
+    "id": "task_309d2655-6bdf-42e2-9a83-f06cdeacc410",
+    "title": "Beach clean",
+    "start": "2027-06-19",
+    "allDay": true,
+    "extendedProps": {
+      "location": "Peppercombe",
+      "description": "Cleaning up waste off beaches to protect the marine environment. All waste recycled where possible.",
+      "equipment": "Sturdy boots, Waterproofs, Packed lunch",
+      "difficulty": "Strenuous"
+    }
+  },
+  {
+    "id": "task_8ef56c9a-005b-45ca-9ae2-59703be9a58d",
+    "title": "Orchard Pruning",
+    "start": "2027-06-29",
+    "allDay": true,
+    "extendedProps": {
+      "location": "Explorer Days",
+      "description": "Winter/Summer pruning of fruit trees to help the orchard flourish.",
+      "equipment": "Waterproofs, Wellies, Cake",
+      "difficulty": "Easy"
+    }
+  }
+]

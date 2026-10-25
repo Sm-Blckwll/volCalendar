@@ -1,0 +1,88 @@
+/* ==========================================================================
+   FullCalendar theme (identical in both apps). FullCalendar injects its own
+   CSS after ours, so a few selectors are prefixed with `html` for specificity.
+   ========================================================================== */
+.fc {
+  --fc-page-bg-color: var(--surface); --fc-neutral-bg-color: var(--surface-alt); --fc-neutral-text-color: var(--text-muted);
+  --fc-border-color: var(--border); --fc-today-bg-color: var(--brand-tint);
+  --fc-button-bg-color: var(--brand); --fc-button-border-color: var(--brand); --fc-button-text-color: var(--on-brand);
+  --fc-button-hover-bg-color: var(--brand-hover); --fc-button-hover-border-color: var(--brand-hover);
+  --fc-button-active-bg-color: var(--brand); --fc-button-active-border-color: var(--brand);
+  --fc-event-bg-color: transparent; --fc-event-border-color: transparent; --fc-event-text-color: inherit;
+  --cal-row: 128px; --cal-row-week: 216px;
+  color: var(--text); font-family: var(--font-body); font-size: var(--text-sm);
+}
+.fc .fc-toolbar { flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4) !important; }
+.fc .fc-toolbar-title { color: var(--heading); font: 400 var(--text-xl)/var(--leading-tight) var(--font-display); }
+.fc .fc-button { min-height: 40px; padding: 0 var(--space-4); border-width: 1px; border-radius: var(--radius); font: 600 var(--text-sm)/1 var(--font-body); text-transform: capitalize; box-shadow: none; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.fc .fc-button:focus, .fc .fc-button:focus-visible { box-shadow: none; }
+.fc .fc-button:active { transform: scale(.97); }
+.fc .fc-button-group > .fc-button { border-radius: 0; }
+.fc .fc-button-group > .fc-button:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.fc .fc-button-group > .fc-button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.fc .fc-button-group > .fc-button:only-child { border-radius: var(--radius); }
+html .fc .fc-button-primary:not(.fc-button-active) { color: var(--brand-text); background: transparent; border-color: var(--brand-text); }
+html .fc .fc-button-primary:not(.fc-button-active):not(:disabled):hover { background: var(--brand-tint); }
+html .fc .fc-button-primary.fc-button-active { color: var(--on-brand); background: var(--brand); border-color: var(--brand); }
+html .fc .fc-button-primary:disabled { opacity: .45; }
+
+.fc-theme-standard .fc-scrollgrid { border-radius: var(--radius); overflow: hidden; }
+.fc-theme-standard td, .fc-theme-standard th, .fc-theme-standard .fc-scrollgrid { border-color: var(--border); }
+.fc .fc-col-header-cell { padding: var(--space-2) 0; background: var(--surface-alt); }
+.fc .fc-col-header-cell-cushion { color: var(--text-muted); font-size: var(--text-xs); font-weight: 700; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
+.fc .fc-daygrid-day { transition: background-color var(--dur) var(--ease); }
+.fc .fc-daygrid-day:hover { background-color: var(--surface-alt); }
+.fc .fc-day-today { --fc-today-bg-color: var(--brand-tint); }
+.fc .fc-daygrid-day-number { padding: var(--space-2) !important; color: var(--text); font-size: var(--text-sm); font-weight: 600; text-decoration: none; }
+.fc .fc-day-other .fc-daygrid-day-top { opacity: 1; }
+.fc .fc-day-other .fc-daygrid-day-number { color: var(--text-muted); font-weight: 400; }
+.fc .fc-day-today .fc-daygrid-day-number { min-width: 28px; margin: var(--space-1); padding: var(--space-1) var(--space-2) !important; color: var(--on-brand); background: var(--brand); border-radius: var(--radius); text-align: center; }
+.fc .fc-more-link { color: var(--brand-text); font-weight: 700; }
+
+/* Fixed row height: every week row is the same height whether or not it holds
+   events; extra events collapse into "+N more" (dayMaxEvents is set in JS). */
+.fc .fc-daygrid-day-frame { min-height: var(--cal-row); }
+.fc .fc-dayGridWeek-view .fc-daygrid-day-frame { min-height: var(--cal-row-week); }
+
+/* Events: flat card on the same border/radius/type as the rest of the page,
+   with a small difficulty dot (colours match the legend). */
+.event-easy { --dot: var(--easy-edge); }
+.event-moderate { --dot: var(--moderate-edge); }
+.event-strenuous { --dot: var(--strenuous-edge); }
+.fc .fc-daygrid-event { margin: 2px var(--space-1); padding: var(--space-1) var(--space-2); background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: none; cursor: pointer; transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.fc .fc-daygrid-event:hover { border-color: var(--brand-text); box-shadow: var(--shadow-1); transform: translateY(-1px); }
+.fc .fc-event-main { overflow: hidden; color: inherit; }
+.fc-event-content { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fc-event-title-custom { overflow: hidden; color: var(--heading); font: 400 var(--text-sm)/1.25 var(--font-display); text-overflow: ellipsis; white-space: nowrap; }
+.fc-daygrid-event .fc-event-title-custom::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; background: var(--dot); border-radius: var(--radius-full); }
+.fc-event-location { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+
+.fc .fc-list { border-color: var(--border); border-radius: var(--radius); overflow: hidden; }
+.fc .fc-list-day-cushion { background: var(--surface-alt); }
+.fc .fc-list-day-text, .fc .fc-list-day-side-text { color: var(--heading); font-family: var(--font-display); font-weight: 400; text-decoration: none; }
+.fc .fc-list-event { --fc-event-border-color: var(--dot); }
+.fc .fc-list-event td { padding: var(--space-3) var(--space-4); }
+.fc .fc-list-event .fc-event-title-custom { font-size: var(--text-md); }
+.fc .fc-list-event:hover td { background: var(--surface-alt); }
+.fc .fc-list-event-title a { color: var(--heading); font-weight: 600; text-decoration: none; }
+.fc .fc-list-event-time { color: var(--text-muted); }
+.fc .fc-list-empty { color: var(--text-muted); background: var(--surface-alt); }
+.fc .fc-popover { background: var(--surface); border-color: var(--border); border-radius: var(--radius); box-shadow: var(--shadow-2); z-index: var(--z-popover); }
+.fc .fc-popover-header { color: var(--heading); background: var(--surface-alt); border-radius: var(--radius) var(--radius) 0 0; }
+
+@media (max-width: 640px) {
+  .fc .fc-toolbar { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3) var(--space-2); }
+  .fc .fc-toolbar-chunk:first-child { grid-column: 1; grid-row: 2; }
+  .fc .fc-toolbar-chunk:nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
+  .fc .fc-toolbar-chunk:last-child { grid-column: 2; grid-row: 2; }
+  .fc .fc-toolbar-title { font-size: var(--text-lg); }
+  .fc .fc-button { padding: 0 var(--space-3); }
+  .fc .fc-col-header-cell-cushion { letter-spacing: 0; }
+  .fc .fc-daygrid-day-number { padding: var(--space-1) !important; font-size: var(--text-xs); }
+  .fc { --cal-row: 92px; --cal-row-week: 160px; }
+  .fc .fc-daygrid-event { margin: 1px; padding: 2px var(--space-1); }
+  .fc-daygrid-event .fc-event-title-custom { font-size: 11px; }
+  .fc-daygrid-event .fc-event-title-custom::before { width: 6px; height: 6px; margin-right: 3px; }
+  .fc-daygrid-event .fc-event-location { display: none; }
+  .fc .fc-list-event td { padding: var(--space-2); }
+}
