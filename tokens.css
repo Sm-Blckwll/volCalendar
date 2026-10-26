@@ -84,7 +84,7 @@
   --shadow-2: 0 6px 16px rgba(33, 33, 33, .12), 0 1px 3px rgba(33, 33, 33, .08);
   --shadow-3: 0 24px 48px rgba(33, 33, 33, .28);
   --scrim: rgba(33, 33, 33, .6);
-  --map-filter: grayscale(.25);
+  --map-filter: none;
 
   /* Motion ----------------------------------------------------------------- */
   --dur-fast: 120ms;
@@ -140,5 +140,5 @@ html.dark {
   --shadow-2: 0 6px 16px rgba(0, 0, 0, .45);
   --shadow-3: 0 24px 48px rgba(0, 0, 0, .6);
   --scrim: rgba(0, 0, 0, .7);
-  --map-filter: brightness(.8) grayscale(.35);
+  --map-filter: brightness(.82);
 }

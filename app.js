@@ -11,9 +11,9 @@ let schedule = [];
 let calendar = null;
 let activeEvent = null;
 let map = null;
-let nextMap = null;
 let nextEvent = null;
-let nextCoordsText = '';
+let modalCoordsText = '';
+const forecastByDate = new Map(); // dateKey -> { day, forecast, location }, filled for the featured day only
 let toastTimer = null;
 let lastFocusedElement = null;
 
@@ -23,7 +23,6 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const ICONS = {
   calendar: '<i data-lucide="calendar-days" aria-hidden="true"></i>',
   pin: '<i data-lucide="map-pin" aria-hidden="true"></i>',
-  clock: '<i data-lucide="clock-3" aria-hidden="true"></i>',
   box: '<i data-lucide="package-check" aria-hidden="true"></i>',
   arrow: '<i data-lucide="arrow-up-right" aria-hidden="true"></i>',
   calendarPlus: '<i data-lucide="calendar-plus" aria-hidden="true"></i>'
@@ -58,8 +57,7 @@ function normaliseEvent(raw, index) {
       location: String(props.location ?? 'Unspecified location').trim() || 'Unspecified location',
       description: String(props.description ?? '').trim(),
       equipment: String(props.equipment ?? '').trim(),
-      difficulty,
-      duration: String(props.duration ?? '').trim()
+      difficulty
     }
   };
   if (raw.end) event.end = String(raw.end);
@@ -91,21 +89,6 @@ function isDateOnly(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ''));
 }
 
-function getDuration(event) {
-  if (event.allDay) return 'All day';
-  if (event.extendedProps.duration) return event.extendedProps.duration;
-  if (!event.end) return 'Time not specified';
-  const start = new Date(event.start);
-  const end = new Date(event.end);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return 'Time not specified';
-  const mins = Math.round((end - start) / 60000);
-  const hours = Math.floor(mins / 60);
-  const remaining = mins % 60;
-  const duration = [hours ? `${hours} hr${hours === 1 ? '' : 's'}` : '', remaining ? `${remaining} min` : ''].filter(Boolean).join(' ');
-  const timeFmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
-  return `${duration} (${timeFmt.format(start)}–${timeFmt.format(end)})`;
-}
-
 function difficultyClass(value) {
   if (value === 'Easy') return 'easy';
   if (value === 'Strenuous') return 'strenuous';
@@ -122,11 +105,17 @@ function refreshIcons() {
 }
 
 function initialiseTheme() {
+  const media = window.matchMedia?.('(prefers-color-scheme: dark)');
   let stored = null;
   try { stored = localStorage.getItem('volunteer-plan-theme'); } catch (_) { /* Storage is optional. */ }
-  const shouldBeDark = stored ? stored === 'dark' : window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-  document.documentElement.classList.toggle('dark', Boolean(shouldBeDark));
-  updateThemeButton();
+  const apply = (dark) => { document.documentElement.classList.toggle('dark', Boolean(dark)); updateThemeButton(); };
+  // Follow the device setting unless the visitor has picked a theme with the toggle.
+  apply(stored ? stored === 'dark' : media?.matches);
+  media?.addEventListener?.('change', (event) => {
+    let override = null;
+    try { override = localStorage.getItem('volunteer-plan-theme'); } catch (_) { /* Storage is optional. */ }
+    if (!override) { fadeThemeChange(); apply(event.matches); }
+  });
   $('#theme-toggle').addEventListener('click', () => {
     fadeThemeChange();
     const dark = document.documentElement.classList.toggle('dark');
@@ -135,7 +124,6 @@ function initialiseTheme() {
     if (calendar) calendar.updateSize();
   });
 }
-
 /** Cross-fade colours briefly while the theme switches (CSS: html.theme-fade). */
 function fadeThemeChange() {
   const root = document.documentElement;
@@ -154,12 +142,8 @@ function animateCalendarView() {
 
 function updateThemeButton() {
   const dark = document.documentElement.classList.contains('dark');
-  const button = $('#theme-toggle');
-  button.innerHTML = `${dark ? '<i data-lucide="sun" aria-hidden="true"></i>' : '<i data-lucide="moon" aria-hidden="true"></i>'}<span class="sr-only">Toggle theme</span>`;
-  button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
-  refreshIcons();
+  $('#theme-toggle').textContent = dark ? 'Click to toggle light mode' : 'Click to toggle dark mode';
 }
-
 async function loadSchedule() {
   try {
     const response = await fetch(DATA_URL, { cache: 'no-store' });
@@ -247,8 +231,7 @@ function pickNextDay(today) {
   return {
     featured,
     isUpcoming: Boolean(upcoming[0]),
-    events: featured ? schedule.filter((event) => dayKey(event.start) === featured) : [],
-    later: upcoming.slice(1, 4).map((key) => schedule.find((event) => dayKey(event.start) === key))
+    events: featured ? schedule.filter((event) => dayKey(event.start) === featured) : []
   };
 }
 
@@ -258,7 +241,9 @@ function renderNextDay() {
   const panel = $('.next-day');
   const today = getToday();
   const pick = pickNextDay(today.date);
+  const title = $('#next-title');
   panel.setAttribute('aria-busy', 'false');
+  panel.dataset.weather = 'off';
   nextEvent = null;
 
   const preview = $('#next-preview');
@@ -268,10 +253,13 @@ function renderNextDay() {
   if (!pick.featured) {
     panel.dataset.state = 'empty';
     setText('#next-heading', 'Next volunteer day');
-    setText('#next-title', schedule.length ? 'No dates to show' : 'No volunteer days yet');
+    title.textContent = schedule.length ? 'No dates to show' : 'No volunteer days yet';
+    title.disabled = true;
     setText('#next-date', '');
     $('#next-countdown').hidden = true;
     $('#next-meta').hidden = true;
+    $('#next-also').hidden = true;
+    $('#next-links').hidden = true;
     const note = $('#next-note');
     note.hidden = false;
     note.textContent = 'Volunteer days will appear here as soon as they are scheduled. Check back soon.';
@@ -284,69 +272,39 @@ function renderNextDay() {
   nextEvent = event;
   panel.dataset.state = pick.isUpcoming ? 'upcoming' : 'past';
   setText('#next-heading', pick.isUpcoming ? 'Next volunteer day' : 'Most recent volunteer day');
-  setText('#next-title', event.title);
-  setText('#next-date', formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+  title.textContent = event.title;
+  title.disabled = false;
+  title.setAttribute('aria-label', `${event.title}: view details`);
+  // Long weekday on wide screens, short on phones (CSS swaps them) so the date and countdown stay on one line.
+  const dateParts = (weekday) => formatDate(event.start, { weekday, day: 'numeric', month: 'long', year: 'numeric' });
+  const [weekLong, ...restLong] = dateParts('long').split(', ');
+  const weekShort = dateParts('short').split(', ')[0];
+  $('#next-date').innerHTML = `<span class="d-long">${escapeHTML(weekLong)}</span><span class="d-short" aria-hidden="true">${escapeHTML(weekShort)}</span>, ${escapeHTML(restLong.join(', '))}`;
   const countdown = $('#next-countdown');
   countdown.hidden = false;
   countdown.textContent = countdownLabel(days);
   $('#next-meta').hidden = false;
   setText('#next-location', props.location);
-  setText('#next-time', event.allDay ? 'All day' : getDuration(event));
-  const badge = $('#next-difficulty');
-  badge.className = `difficulty-badge badge-${difficultyClass(props.difficulty)}`;
-  badge.textContent = props.difficulty;
   const note = $('#next-note');
   note.hidden = pick.isUpcoming;
-  note.textContent = pick.isUpcoming ? '' : 'There are no upcoming volunteer days in the schedule yet, so this is the most recent one.';
+  note.textContent = pick.isUpcoming ? '' : 'There are no upcoming volunteer days yet, so this is the most recent one.';
+  $('#next-links').hidden = false;
 
-  setText('#next-description', props.description || 'No description provided for this task.');
-  const equipment = listEquipment(props.equipment);
-  const equipmentBox = $('#next-equipment');
-  equipmentBox.replaceChildren();
-  if (!equipment.length) {
-    equipmentBox.innerHTML = '<span class="muted-copy">No equipment listed.</span>';
-  } else {
-    equipment.forEach((item) => {
-      const chip = document.createElement('span');
-      chip.className = 'equipment-chip';
-      chip.innerHTML = `<i data-lucide="check-circle-2" aria-hidden="true"></i><span>${escapeHTML(item)}</span>`;
-      equipmentBox.appendChild(chip);
-    });
-  }
-
-  // Other tasks on the same day.
+  // Other tasks on the same day: a quiet "Also: ..." line of text links.
   const also = $('#next-also');
-  also.hidden = pick.events.length < 2;
-  also.replaceChildren();
-  if (pick.events.length > 1) {
-    const label = document.createElement('span');
-    label.textContent = 'Also this day:';
-    also.appendChild(label);
-    pick.events.slice(1).forEach((other) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'text-link text-button';
-      button.textContent = `${other.title} · ${other.extendedProps.location}`;
-      button.addEventListener('click', () => openEventModal(other));
-      also.appendChild(button);
-    });
-  }
-
-  // Then coming up.
-  const list = $('#coming-list');
-  list.replaceChildren();
-  pick.later.forEach((later) => {
-    const item = document.createElement('li');
+  const alsoList = $('#next-also-list');
+  alsoList.replaceChildren();
+  pick.events.slice(1).forEach((other, index) => {
+    if (index) alsoList.append(', ');
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'coming-item';
-    button.setAttribute('aria-label', `${later.title}, ${formatDate(later.start)}, ${later.extendedProps.location}. View details`);
-    button.innerHTML = `<span class="coming-date">${escapeHTML(formatDate(later.start, { weekday: 'short', day: 'numeric', month: 'short' }))}</span><span class="coming-title">${escapeHTML(later.title)}</span><span class="coming-place">${escapeHTML(later.extendedProps.location)}</span>`;
-    button.addEventListener('click', () => openEventModal(later));
-    item.appendChild(button);
-    list.appendChild(item);
+    button.className = 'text-button';
+    button.textContent = other.title;
+    button.setAttribute('aria-label', `Also this day: ${other.title} at ${other.extendedProps.location}. View details`);
+    button.addEventListener('click', () => openEventModal(other));
+    alsoList.appendChild(button);
   });
-  $('#next-upcoming').hidden = pick.later.length === 0;
+  also.hidden = pick.events.length < 2;
 
   const weatherBox = $('#next-weather');
   weatherBox.hidden = true;
@@ -355,33 +313,20 @@ function renderNextDay() {
   loadNextDayPlace(event, days, pick.isUpcoming);
 }
 
-/** Geocode once, then draw the map, links and weather; none of this blocks the rest of the page. */
+/** Directions work straight away (by place name); once the place is found they use exact coordinates and the weather loads. */
 async function loadNextDayPlace(event, days, isUpcoming) {
   const location = event.extendedProps.location;
   const isCurrent = () => nextEvent === event;
-  const previous = nextMap;
-  nextMap = null;
-  const draggable = !(window.L && window.L.Browser && window.L.Browser.mobile);
-  const result = await mountLocationMap($('#next-map'), location, previous, isCurrent, { dragging: draggable });
-  if (!isCurrent()) return;
-  nextMap = result.map;
-  const coords = result.coords;
-  const links = mapLinks(coords, location);
-  $('#next-directions').href = links.google;
-  $('#next-directions-apple').href = links.apple;
-  const osm = $('#next-directions-osm');
-  osm.hidden = !links.osm;
-  if (links.osm) osm.href = links.osm;
-  const copy = $('#next-copy-coords');
-  copy.hidden = !coords;
-  if (coords) {
-    nextCoordsText = `${coords.lat.toFixed(5)}, ${coords.lon.toFixed(5)}`;
-    setText('#next-coords', nextCoordsText);
-    copy.setAttribute('aria-label', `Copy coordinates ${nextCoordsText}`);
+  $('#next-directions').href = mapLinks(null, location).google;
+  let coords = null;
+  try {
+    coords = await geocodeLocation(location);
+  } catch (error) {
+    console.warn('Could not find the next day\'s location:', error);
   }
-  if (coords && isUpcoming) {
-    renderWeather(event, coords, days).catch((error) => console.warn('Weather unavailable:', error));
-  }
+  if (!isCurrent() || !coords) return;
+  $('#next-directions').href = mapLinks(coords, location).google;
+  if (isUpcoming) renderWeather(event, coords, days).catch((error) => console.warn('Weather unavailable:', error));
 }
 
 // ---- Weather (Open-Meteo, cached, never blocks the page) ----
@@ -460,6 +405,13 @@ const timeOf = (iso) => (iso ? timeFormat.format(new Date(`${iso}Z`)) : '');
 const hasNumber = (value) => typeof value === 'number' && Number.isFinite(value);
 const round = (value) => Math.round(value);
 
+function showWeather(box, kind) {
+  box.dataset.kind = kind;
+  box.hidden = false;
+  $('.next-day').dataset.weather = 'on';
+  refreshIcons();
+}
+
 async function renderWeather(event, coords, days) {
   const box = $('#next-weather');
   const eventDate = parseLocalDate(dayKey(event.start));
@@ -482,8 +434,10 @@ async function renderWeather(event, coords, days) {
     if (!isCurrent()) return;
     const day = forecast && !forecast.data.outOfRange ? readDays(forecast.data)[0] : null;
     if (day && hasNumber(day.high) && day.code !== null) {
-      box.innerHTML = forecastMarkup(day, location, forecast);
-      box.hidden = false;
+      box.innerHTML = forecastMarkup(day);
+      forecastByDate.set(dateKey, { kind: 'forecast', day, forecast, location });
+      if (activeEvent && dayKey(activeEvent.start) === dateKey) renderModalWeather(activeEvent);
+      showWeather(box, 'forecast');
       refreshIcons();
       return;
     }
@@ -491,98 +445,91 @@ async function renderWeather(event, coords, days) {
     if (!forecast) return; // Offline with nothing cached: hide the block.
   }
 
-  // 2. Too far ahead: be honest, and show last year's conditions for the same week as a guide.
-  box.innerHTML = outsideMarkup(availableFrom, null, location);
-  box.hidden = false;
-  refreshIcons();
+  // 2. Too far ahead: the band says when the forecast starts; the modal adds last year's typical highs.
+  const from = formatDate(toKey(availableFrom), { day: 'numeric', month: 'short' });
+  box.innerHTML = outsideMarkup(from);
+  showWeather(box, 'outside');
+  forecastByDate.set(dateKey, { kind: 'outside', from, typical: null, location });
   try {
     const lastYear = new Date(eventDate);
     lastYear.setFullYear(lastYear.getFullYear() - 1);
-    const from = new Date(lastYear); from.setDate(from.getDate() - 3);
-    const to = new Date(lastYear); to.setDate(to.getDate() + 3);
-    const archive = await cachedWeather(`${WEATHER_CACHE_PREFIX}a:${key}:${toKey(from)}`, weatherUrl(WEATHER_ARCHIVE_API, coords, toKey(from), toKey(to)), 30 * 86400000);
+    const start = new Date(lastYear); start.setDate(start.getDate() - 3);
+    const end = new Date(lastYear); end.setDate(end.getDate() + 3);
+    const archive = await cachedWeather(`${WEATHER_CACHE_PREFIX}a:${key}:${toKey(start)}`, weatherUrl(WEATHER_ARCHIVE_API, coords, toKey(start), toKey(end)), 30 * 86400000);
     if (!isCurrent()) return;
     const week = readDays(archive.data).filter((day) => hasNumber(day.high) && hasNumber(day.low));
     if (week.length >= 4) {
-      box.innerHTML = outsideMarkup(availableFrom, { week, lastYear, from, to }, location);
-      refreshIcons();
+      const highs = week.map((day) => day.high);
+      forecastByDate.set(dateKey, { kind: 'outside', from, typical: { low: round(Math.min(...highs)), high: round(Math.max(...highs)) }, location });
+      if (activeEvent && dayKey(activeEvent.start) === dateKey) renderModalWeather(activeEvent);
     }
   } catch (error) {
     console.warn('Typical conditions unavailable:', error);
   }
 }
 
-function statMarkup(icon, label, value) {
-  return `<div class="stat"><i data-lucide="${icon}" aria-hidden="true"></i><div><span class="stat-label">${label}</span><span class="stat-value">${value}</span></div></div>`;
-}
-
-/** Short, practical advice from the numbers (empty when nothing stands out). */
-function practicalTips({ rainChance, rain, high, gust, wind, sunset, rainyDays, days }) {
-  const tips = [];
-  const wet = (hasNumber(rainChance) && rainChance > 50) || (hasNumber(rain) && rain >= 2 && !days) || (days && rainyDays / days >= 0.6);
-  if (wet) tips.push(['umbrella', days ? 'Often wet at this time of year, so pack waterproofs.' : 'Rain is likely, so bring waterproofs.']);
-  if (hasNumber(high) && high <= 6) tips.push(['snowflake', 'Cold day: wrap up warm and bring gloves and a hat.']);
-  else if (hasNumber(high) && high >= 24) tips.push(['sun', 'Warm day: bring water and sun cream.']);
-  if ((hasNumber(gust) && gust >= 35) || (hasNumber(wind) && wind >= 30)) tips.push(['wind', 'Strong winds are expected: wear an extra layer.']);
-  if (sunset && sunset <= '17:00') tips.push(['sunset', `Sunset at ${sunset}. Plan to finish before dusk.`]);
-  return tips.slice(0, 3);
-}
-
-function tipsMarkup(tips) {
-  if (!tips.length) return '';
-  return `<ul class="practical">${tips.map(([icon, text]) => `<li><i data-lucide="${icon}" aria-hidden="true"></i><span>${escapeHTML(text)}</span></li>`).join('')}</ul>`;
-}
-
-function forecastMarkup(day, location, forecast) {
-  const info = describeWeather(day.code);
-  const stamp = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(forecast.t));
-  const rain = [hasNumber(day.rainChance) ? `${round(day.rainChance)}% chance` : '', hasNumber(day.rain) ? `${day.rain.toFixed(1)} mm` : ''].filter(Boolean).join(' · ') || '—';
-  const wind = hasNumber(day.wind) ? `${round(day.wind)} mph${hasNumber(day.gust) ? `, gusts ${round(day.gust)}` : ''}` : '—';
-  const tips = practicalTips({ rainChance: day.rainChance, rain: day.rain, high: day.high, gust: day.gust, wind: day.wind, sunset: timeOf(day.sunset) });
-  return `
-    <h2 class="block-title">Weather</h2>
-    <div class="weather-head">
-      <span class="weather-icon"><i data-lucide="${info.icon}" aria-hidden="true"></i></span>
-      <div><p class="weather-main">${escapeHTML(info.label)}</p><p class="weather-temp">${round(day.high)}° / ${round(day.low)}°C</p></div>
-    </div>
-    <div class="stats">
-      ${statMarkup('droplets', 'Rain', escapeHTML(rain))}
-      ${statMarkup('wind', 'Wind', escapeHTML(wind))}
-      ${statMarkup('sunrise', 'Sunrise', escapeHTML(timeOf(day.sunrise) || '—'))}
-      ${statMarkup('sunset', 'Sunset', escapeHTML(timeOf(day.sunset) || '—'))}
-    </div>
-    ${tipsMarkup(tips)}
-    <p class="weather-source">Forecast for ${escapeHTML(location)} · Open-Meteo · updated ${escapeHTML(stamp)}${forecast.stale ? ' (saved copy, you may be offline)' : ''}</p>`;
-}
-
-function outsideMarkup(availableFrom, typical, location) {
-  const from = formatDate(toKey(availableFrom), { weekday: 'short', day: 'numeric', month: 'short' });
-  let extra = '';
-  if (typical) {
-    const { week, lastYear, from: start, to: end } = typical;
-    const highs = week.map((day) => day.high);
-    const lows = week.map((day) => day.low);
-    const wetDays = week.filter((day) => hasNumber(day.rain) && day.rain >= 1).length;
-    const middle = week.find((day) => day.date === toKey(lastYear)) || week[Math.floor(week.length / 2)];
-    const range = `${formatDate(toKey(start), { day: 'numeric', month: 'short' })} – ${formatDate(toKey(end), { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    const sunset = timeOf(middle.sunset);
-    const tips = practicalTips({ high: Math.max(...highs), rainyDays: wetDays, days: week.length, sunset });
-    extra = `
-      <div class="stats">
-        ${statMarkup('thermometer', 'Typical high / low', `${round(Math.min(...highs))}–${round(Math.max(...highs))}° / ${round(Math.min(...lows))}–${round(Math.max(...lows))}°C`)}
-        ${statMarkup('droplets', 'Wet days', `${wetDays} of ${week.length}`)}
-        ${statMarkup('sunrise', 'Sunrise', escapeHTML(timeOf(middle.sunrise) || '—'))}
-        ${statMarkup('sunset', 'Sunset', escapeHTML(sunset || '—'))}
-      </div>
-      ${tipsMarkup(tips)}
-      <p class="weather-source">Not a forecast. This is what ${escapeHTML(location)} saw last year, ${escapeHTML(range)} (Open-Meteo archive).</p>`;
+/** What the band leaves out (tip, wind, rainfall, sunrise and sunset, typical highs) lives in the task modal. */
+function renderModalWeather(event) {
+  const step = $('#modal-weather-step');
+  const entry = forecastByDate.get(dayKey(event.start));
+  step.hidden = !entry;
+  if (!entry) return;
+  const { location } = entry;
+  if (entry.kind === 'outside') {
+    $('#modal-weather').innerHTML = `
+      <p>Forecasts only reach about two weeks ahead, so the forecast for this day will appear from ${escapeHTML(entry.from)}.</p>
+      ${entry.typical ? `<p class="wx-typical"><strong>Typically ${entry.typical.low}–${entry.typical.high}°C</strong> for ${escapeHTML(location)}: last year’s highs for the same week (Open-Meteo archive). Not a forecast.</p>` : ''}`;
+    return;
   }
+  const { day, forecast } = entry;
+  const info = describeWeather(day.code);
+  const tip = shortTip(day);
+  const facts = [
+    ['Conditions', info.label],
+    ['Temperature', `${round(day.high)}° high / ${round(day.low)}° low`],
+    ['Rain', [hasNumber(day.rainChance) ? `${round(day.rainChance)}% chance` : '', hasNumber(day.rain) ? `${day.rain.toFixed(1)} mm` : ''].filter(Boolean).join(' · ')],
+    ['Wind', hasNumber(day.wind) ? `${round(day.wind)} mph${hasNumber(day.gust) ? `, gusts ${round(day.gust)} mph` : ''}` : ''],
+    ['Sunrise', timeOf(day.sunrise)],
+    ['Sunset', timeOf(day.sunset)]
+  ].filter(([, value]) => value);
+  $('#modal-weather').innerHTML = `
+    ${tip ? `<p class="wx-tip">${escapeHTML(tip)}</p>` : ''}
+    <dl class="wx-facts">${facts.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>
+    <p class="wx-source">Forecast for ${escapeHTML(location)} · Open-Meteo${forecast.stale ? ' (saved copy, you may be offline)' : ''}</p>`;
+}
+
+/** Rain yes/no (with the chance when known). */
+function rainLabel(day) {
+  if (hasNumber(day.rainChance)) {
+    const pct = `${round(day.rainChance)}%`;
+    if (day.rainChance >= 50) return `Rain likely · ${pct}`;
+    if (day.rainChance >= 25) return `Showers possible · ${pct}`;
+    return `Dry · ${pct}`;
+  }
+  return hasNumber(day.rain) && day.rain >= 1 ? 'Rain likely' : 'Dry';
+}
+
+/** One short phrase, only when something stands out (shown in the modal). */
+function shortTip(day) {
+  if ((hasNumber(day.rainChance) && day.rainChance > 50) || (!hasNumber(day.rainChance) && hasNumber(day.rain) && day.rain >= 2)) return 'Bring waterproofs';
+  if (hasNumber(day.high) && day.high <= 6) return 'Wrap up warm';
+  if (hasNumber(day.high) && day.high >= 24) return 'Bring water and sun cream';
+  return '';
+}
+
+/** The band shows one quiet line: icon, temperature, rain yes/no. */
+function forecastMarkup(day) {
+  const info = describeWeather(day.code);
   return `
-    <h2 class="block-title">Weather</h2>
-    <div class="weather-head">
-      <span class="weather-icon"><i data-lucide="calendar-clock" aria-hidden="true"></i></span>
-      <div><p class="weather-main">Forecast available from ${escapeHTML(from)}</p><p class="weather-temp weather-temp-muted">Forecasts only reach about two weeks ahead.</p></div>
-    </div>${extra}`;
+    <i data-lucide="${info.icon}" aria-hidden="true"></i>
+    <span class="weather-temp">${round(day.high)}° / ${round(day.low)}°C</span>
+    <span class="weather-rain">${escapeHTML(rainLabel(day))}</span>
+    <span class="sr-only">${escapeHTML(info.label)}</span>`;
+}
+
+/** Beyond the forecast window: say when it starts and nothing else. */
+function outsideMarkup(from) {
+  return `<i data-lucide="calendar-days" aria-hidden="true"></i><span class="weather-rain">Forecast from ${escapeHTML(from)}</span>`;
 }
 
 // ---- Share, copy, calendar ----
@@ -606,11 +553,11 @@ async function copyText(text) {
   }
 }
 
-async function shareNextDay() {
-  if (!nextEvent) return;
-  const props = nextEvent.extendedProps;
+async function shareEvent(event) {
+  if (!event) return;
+  const props = event.extendedProps;
   const url = `${window.location.origin}${window.location.pathname}`;
-  const text = `Volunteer day: ${nextEvent.title} at ${props.location}, ${formatDate(nextEvent.start, { weekday: 'long', day: 'numeric', month: 'long' })}.`;
+  const text = `Volunteer day: ${event.title} at ${props.location}, ${formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long' })}.`;
   if (navigator.share) {
     try {
       await navigator.share({ title: 'Volunteer Plan 2027', text, url });
@@ -647,7 +594,7 @@ function initCalendar() {
     height: 'auto',
     dayMaxEvents: 1,
     navLinks: false,
-    nowIndicator: true,
+    displayEventTime: false, // days are all-day, so no time column or prefix in any view
     events: schedule.map((event) => ({
       id: event.id,
       title: event.title,
@@ -718,7 +665,7 @@ function renderDirectory(options = {}) {
   if (!schedule.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.innerHTML = '<span class="empty-icon"><i data-lucide="calendar-clock" aria-hidden="true"></i></span><p><strong>No scheduled tasks yet</strong><br>Tasks will appear here when the Manager dashboard exports a schedule.</p>';
+    empty.innerHTML = '<span class="empty-icon"><i data-lucide="calendar-days" aria-hidden="true"></i></span><p><strong>No scheduled tasks yet</strong><br>Tasks will appear here when the Manager dashboard exports a schedule.</p>';
     container.appendChild(empty);
     refreshIcons();
     return;
@@ -761,7 +708,7 @@ function createTaskCard(event) {
   main.className = 'task-card-main';
   const date = document.createElement('div');
   date.className = 'task-date';
-  date.innerHTML = `${ICONS.calendar}<span>${escapeHTML(formatDate(event.start))}${event.allDay ? ' · All day' : ''}</span>`;
+  date.innerHTML = `${ICONS.calendar}<span>${escapeHTML(formatDate(event.start))}</span>`;
   const title = document.createElement('h4');
   title.textContent = event.title;
   const description = document.createElement('p');
@@ -776,7 +723,7 @@ function createTaskCard(event) {
   const equipmentCount = listEquipment(props.equipment).length;
   const equipment = document.createElement('span');
   equipment.className = 'task-equipment-summary';
-  equipment.innerHTML = `${ICONS.box}<span>${equipmentCount ? `${equipmentCount} equipment ${equipmentCount === 1 ? 'item' : 'items'}` : 'Equipment not specified'}</span>`;
+  equipment.innerHTML = `${ICONS.box}<span>${equipmentCount ? `${equipmentCount} ${equipmentCount === 1 ? 'thing' : 'things'} to bring` : 'Things to bring not specified'}</span>`;
   meta.appendChild(equipment);
   main.append(title, description, meta);
 
@@ -798,8 +745,7 @@ function openEventModal(event) {
   lastFocusedElement = document.activeElement;
   const props = event.extendedProps;
   $('#modal-title').textContent = event.title;
-  $('#modal-date').textContent = `${formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${!event.allDay ? formatTimedRange(event) : ''}`;
-  $('#modal-duration').textContent = getDuration(event);
+  $('#modal-date').textContent = formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('#modal-location').textContent = props.location || 'Location to be confirmed';
   $('#modal-description').textContent = props.description || 'No description provided for this task.';
   const badge = $('#modal-difficulty');
@@ -822,9 +768,7 @@ function openEventModal(event) {
       equipmentContainer.appendChild(chip);
     });
   }
-  const directions = $('#map-directions');
-  directions.hidden = true;
-  directions.removeAttribute('href');
+  renderModalWeather(event);
   const backdrop = $('#event-modal');
   backdrop.hidden = false;
   backdrop.setAttribute('aria-hidden', 'false');
@@ -833,18 +777,6 @@ function openEventModal(event) {
   refreshIcons();
   renderEventMap(props.location);
   $('#download-event-ics').disabled = false;
-}
-
-function formatTimedRange(event) {
-  const start = new Date(event.start);
-  if (Number.isNaN(start.getTime())) return '';
-  const timeFmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
-  let label = ` · ${timeFmt.format(start)}`;
-  if (event.end) {
-    const end = new Date(event.end);
-    if (!Number.isNaN(end.getTime())) label += `–${timeFmt.format(end)}`;
-  }
-  return label;
 }
 
 function closeEventModal() {
@@ -878,7 +810,7 @@ function mapLinks(coords, location) {
  * `previous` is disposed first; `isCurrent()` lets callers drop results that arrive late.
  * Resolves to { map, coords }.
  */
-async function mountLocationMap(element, location, previous, isCurrent, { dragging = true } = {}) {
+async function mountLocationMap(element, location, previous, isCurrent) {
   // Leaflet owns the element's children, so dispose the old instance before reusing it.
   if (previous) previous.remove();
   element.innerHTML = '<div class="map-placeholder">Finding this location on the map…</div>';
@@ -891,8 +823,8 @@ async function mountLocationMap(element, location, previous, isCurrent, { draggi
     if (!isCurrent()) return { map: null, coords };
     element.innerHTML = '';
     const view = coords ? [coords.lat, coords.lon] : MAP_FALLBACK;
-    const instance = L.map(element, { scrollWheelZoom: false, zoomControl: true, attributionControl: false, dragging }).setView(view, coords ? 14 : 10, { animate: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(instance);
+    const instance = L.map(element, { scrollWheelZoom: false, attributionControl: false }).setView(view, coords ? 14 : 10, { animate: false });
+    L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/bright', attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(instance);
     L.control.attribution({ prefix: false }).addTo(instance);
     const icon = L.divIcon({ className: '', html: '<span class="custom-map-marker"><i data-lucide="map-pin" aria-hidden="true"></i></span>', iconSize: [32, 36], iconAnchor: [16, 34] });
     const marker = L.marker(view, { icon }).addTo(instance);
@@ -915,16 +847,28 @@ async function mountLocationMap(element, location, previous, isCurrent, { draggi
 }
 
 async function renderEventMap(location) {
-  const directions = $('#map-directions');
-  directions.hidden = true;
   const previous = map;
   map = null;
+  const links = mapLinks(null, location);
+  setModalLinks(links, null);
   const result = await mountLocationMap($('#event-map'), location, previous, () => Boolean(activeEvent) && activeEvent.extendedProps.location === location && !$('#event-modal').hidden);
   map = result.map;
-  const osm = result.coords ? mapLinks(result.coords, location).osm : null;
-  if (osm) {
-    directions.href = osm;
-    directions.hidden = false;
+  if (result.coords) setModalLinks(mapLinks(result.coords, location), result.coords);
+}
+
+/** Directions links in the task modal. Without coordinates they search by place name. */
+function setModalLinks(links, coords) {
+  $('#map-directions').href = links.google;
+  $('#modal-apple').href = links.apple;
+  const osm = $('#modal-osm');
+  osm.hidden = !links.osm;
+  if (links.osm) osm.href = links.osm;
+  const copy = $('#modal-copy-coords');
+  copy.hidden = !coords;
+  if (coords) {
+    modalCoordsText = `${coords.lat.toFixed(5)}, ${coords.lon.toFixed(5)}`;
+    setText('#modal-coords', modalCoordsText);
+    copy.setAttribute('aria-label', `Copy coordinates ${modalCoordsText}`);
   }
 }
 
@@ -1113,9 +1057,10 @@ function bindControls() {
     $('#task-search').focus();
   });
   $('#download-all-ics').addEventListener('click', () => generateICS(schedule));
-  $('#next-ics').addEventListener('click', () => { if (nextEvent) generateICS([nextEvent], `${slugify(nextEvent.title)}-2027.ics`); });
-  $('#next-share').addEventListener('click', shareNextDay);
-  $('#next-copy-coords').addEventListener('click', async () => showToast(await copyText(nextCoordsText) ? 'Coordinates copied' : 'Could not copy the coordinates'));
+  $('#next-title').addEventListener('click', () => { if (nextEvent) openEventModal(nextEvent); });
+  $('#next-details').addEventListener('click', () => { if (nextEvent) openEventModal(nextEvent); });
+  $('#modal-share').addEventListener('click', () => shareEvent(activeEvent));
+  $('#modal-copy-coords').addEventListener('click', async () => showToast(await copyText(modalCoordsText) ? 'Coordinates copied' : 'Could not copy the coordinates'));
   $('#download-event-ics').addEventListener('click', () => { if (activeEvent) generateICS([activeEvent], `${slugify(activeEvent.title)}-2027.ics`); });
   $('#close-modal').addEventListener('click', closeEventModal);
   $('#modal-close-secondary').addEventListener('click', closeEventModal);

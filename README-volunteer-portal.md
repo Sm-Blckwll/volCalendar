@@ -6,11 +6,11 @@ A lightweight, read-only portal styled to align with the supplied Manager dashbo
 
 - `index.html`
 - `tokens.css`, `base.css`, `calendar.css` — the shared design system (see Design notes)
-- `styles.css` — portal layout, the next-volunteer-day panel (with its hills artwork), weather, directory and filters
+- `styles.css` — portal layout, the calm next-volunteer-day band (with its hills artwork), the quiet toolbar, directory and filters
 - `fonts/NationalTrustTT-Regular.woff2` — typeface
 - `app.js`
 - `volunteer_plan_2027.json` — exported by the Manager dashboard
-- `volunteer-schedule.pdf` — the existing PDF file referenced by the Download PDF Schedule action next to the calendar export button
+- `volunteer-schedule.pdf` — the existing PDF file referenced by the PDF schedule button in the toolbar above the calendar
 
 The JSON and PDF assets are not bundled because they were not included with the supplied Manager source files. If the JSON has not been placed alongside `index.html`, the task directory shows an error state with setup guidance; routine successful loading is kept out of the volunteer UI.
 
@@ -24,11 +24,11 @@ python -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-The page uses CDN-hosted FullCalendar, Leaflet and Lucide assets, OpenStreetMap tiles, and Nominatim for geocoding location names that are not pre-mapped. These features need an internet connection. The three named North Devon localities Brownsham, Peppercombe and East Titchberry have approximate map coordinates; other locations use geocoding when a volunteer opens an event.
+The page uses CDN-hosted FullCalendar, Leaflet and Lucide assets, OpenFreeMap bright vector map (OpenStreetMap data, free, no key), and Nominatim for geocoding location names that are not pre-mapped. These features need an internet connection. The three named North Devon localities Brownsham, Peppercombe and East Titchberry have approximate map coordinates; other locations use geocoding when a volunteer opens an event.
 
 ## Supported event fields
 
-The application consumes an array of event objects with `id`, `title`, `start`, optional `end`, optional `allDay`, and `extendedProps` fields including `location`, `description`, `equipment` and `difficulty`. Difficulty values are `Easy`, `Moderate`, and `Strenuous`. For all-day events the modal displays `All day`, and the calendar export creates an all-day iCalendar event with an exclusive end date.
+The application consumes an array of event objects with `id`, `title`, `start`, optional `end`, optional `allDay`, and `extendedProps` fields including `location`, `description`, `equipment` and `difficulty`. Difficulty values are `Easy`, `Moderate`, and `Strenuous`. The data format is unchanged. The volunteer days are all-day events, and the calendar export still creates all-day iCalendar events with an exclusive end date, but **no time text is shown anywhere in the portal** (no "All day", clock icons or times in the band, modal, month or list views, or task directory; the calendar uses `displayEventTime: false`). The only clock times left are sunrise and sunset in the modal forecast, which are weather facts.
 
 ## Design notes (redesign)
 
@@ -62,34 +62,44 @@ Difficulty colours (`--easy-*`, `--moderate-*`, `--strenuous-*`) are tinted back
 
 **Task directory**: one task per full-width row — date | title, description, difficulty badge and equipment | action button — stacking to one column on mobile.
 
-**Task detail modal**: same header, sections-with-markers and footer pattern as the planner's task editor (icons instead of step numbers, one primary button).
+**Task detail modal**: same header, sections-with-markers and footer pattern as the planner's task editor (icons instead of step numbers, one primary button). It now also holds the forecast details, directions links, Share and Add to My Calendar.
 
 **Where to tweak**: change a colour, radius, spacing or motion value in `tokens.css`; shared components in `base.css`; calendar in `calendar.css`.
 
 Accessibility: AA text contrast in both themes, visible animated focus rings, skip link, keyboard-operable chips and segmented control, focus trap and Esc in dialogs, `prefers-reduced-motion` respected.
 
-**Next volunteer day panel**: replaces the old hero banner and summary card. `renderNextDay()` in `app.js` picks the first day on or after today from the JSON (days are grouped, so a busy day lists "Also this day"). Its band (the old hills and sun artwork, now short) holds the date, a countdown pill ("Today", "Tomorrow", "in 12 days"), time or "All day", location and difficulty. Below are the description, equipment chips, weather, a map, actions and a **Then coming up** list of the next 2 to 3 days that opens their detail modals. On mobile the order is info, weather, map, actions, coming up, with a fixed 240 px map (300 px on desktop) and 44 px tap targets. If no day is upcoming it shows the most recent day, labelled "Most recent volunteer day" (no weather, no coming-up list). If the file is empty it shows a friendly "No volunteer days yet" message. The panel reveals with the shared `.reveal` stagger and honours `prefers-reduced-motion`.
+**Next volunteer day panel**: one calm green band (about 167 px tall at 1280 px wide, 231 px at 390 px) that replaces the old hero banner, summary card and big white body. `renderNextDay()` in `app.js` picks the first day on or after today from the JSON (days are grouped). It holds about five pieces of information with a single focal point, and the old hills and sun artwork sits faintly behind it:
 
-**Map and directions**: the panel reuses the same Leaflet / OpenStreetMap / Nominatim code and in-memory geocode cache as the detail modal (`mountLocationMap`). The panel map does not capture one-finger drags on touch screens, so the page still scrolls. **Get directions** opens `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>` (no key); **Apple Maps** (`maps.apple.com/?daddr=`) and **OpenStreetMap** (`openstreetmap.org/directions?to=`) are the alternatives. If the location cannot be geocoded, the links fall back to a place-name search. The coordinates button copies `lat, lng`. **Add to calendar** downloads an `.ics` for that day (same builder as the detail modal). **Share** uses `navigator.share` where available, otherwise copies the link to the clipboard. **Add all dates to my calendar** moved to the row above the calendar.
+- **Left**: a quiet "Next volunteer day" label, the task title (the focal point, large), the date with a bold countdown ("Today", "Tomorrow", "in 74 days") and the location with a pin icon. If the day has more tasks, one quiet line "Also: Second task" follows (the names are text links that open that task).
+- **Right**: the weather as one small inline line (icon, high/low temperature and rain yes/no with the %, e.g. "9° / 4°C · Rain likely · 70%"), then **Directions** (the one filled, high-contrast primary button) and **Details** (a ghost text button). Outside the forecast window the weather is a single quiet "Forecast from 23 Dec". It is hidden if nothing can be loaded.
+- **Under the band**: when `?today=` is used, a tiny muted note "Preview: today is 1 Jan 2027". It is never shown otherwise.
 
-**Weather** (Open-Meteo, free, no API key, CORS enabled, so it works from GitHub Pages):
+The band deliberately has **no map, no difficulty badge and no time** and no competing boxes or borders. On tablet it stays two-column. On mobile (640 px or less) it stacks (title, date, location, weather, then Directions beside Details, all 44 px high), and the weekday is shortened ("Wed") so the date stays on one line. It reveals with the shared `.reveal` stagger and honours `prefers-reduced-motion`.
 
-- Forecast: `GET https://api.open-meteo.com/v1/forecast?latitude=&longitude=&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset,precipitation_probability_max,wind_gusts_10m_max&timezone=GMT&wind_speed_unit=mph&start_date=<day>&end_date=<day>`. Used when the day is within 15 days (today to today + 14). Shows an icon from the WMO code, high and low, rain chance and amount, wind and gusts, and sunrise and sunset.
-- Further out: shows "Forecast available from <date>", plus typical conditions: `GET https://archive-api.open-meteo.com/v1/archive` (same fields, without probability and gusts) for the same week last year (the day plus or minus 3). It is labelled "Not a forecast" with the dates it covers.
+Clicking or tapping the title, or **Details**, opens the existing task modal for that day. **Everything else is in the modal**: description, what to bring, difficulty, the Forecast section (conditions, temperature, rain chance and amount, wind and gusts, sunrise and sunset, a "Bring waterproofs" style tip, and only outside the window the "Typically X–Y°C / last year's highs" note), the map with **Get directions** (Google), **Apple Maps**, **OpenStreetMap** and the copy-coordinates button, **Share** (`navigator.share`, otherwise copies the link) and **Add to My Calendar** (`.ics` for that day). The toolbar above the calendar holds a quiet pair of buttons: **Add all to calendar** and **PDF schedule**.
+
+If no day is upcoming the band shows the most recent day, labelled "Most recent volunteer day" (no weather, no countdown). If the file is empty it shows a short "No volunteer days yet" message.
+
+**Map and directions**: the map lives only in the modal (`mountLocationMap`, Leaflet / OpenStreetMap / Nominatim with an in-memory geocode cache). The band's Directions button works immediately with a place-name link and is upgraded to exact coordinates once the location is geocoded: `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>` (no key); Apple Maps is `maps.apple.com/?daddr=` and OpenStreetMap is `openstreetmap.org/directions?to=`. If the location cannot be geocoded, the links fall back to a place-name search and the coordinates and OpenStreetMap links are hidden.
+
+**Weather** (Open-Meteo, free, no API key, CORS enabled, so it works from GitHub Pages). The logic and caching are unchanged; only the presentation is smaller:
+
+- Forecast: `GET https://api.open-meteo.com/v1/forecast?latitude=&longitude=&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset,precipitation_probability_max,wind_gusts_10m_max&timezone=GMT&wind_speed_unit=mph&start_date=<day>&end_date=<day>`. Used when the day is within 15 days (today to today + 14). The band shows only temperature and rain yes/no; the tip, wind, sunrise and sunset appear in the modal.
+- Further out: `GET https://archive-api.open-meteo.com/v1/archive` (same fields, without probability and gusts) for the same week last year (the day plus or minus 3) gives "Typically X–Y°C" (the range of that week's highs), shown in the modal only and labelled "Not a forecast". The band just says "Forecast from 23 Dec".
 - Times are requested in `GMT` and converted to UK time per date, because Open-Meteo applies today's UTC offset to every date, which is wrong for dates across a clock change.
-- A practical line is added from the data: waterproofs if the rain chance is over 50% (or 2 mm or more is forecast, or most of last year's week was wet), a cold note at a high of 6 degrees C or below, a warm note at 24 or above, a wind note for gusts of 35 mph or more, and a dusk warning if sunset is 17:00 or earlier (at most 3 tips).
-- Cached in `localStorage` (`vp-wx:*`, with a timestamp): forecasts 3 hours, archive data 30 days; entries older than 30 days are removed. If the network fails a saved copy is shown, labelled as such. If there is nothing saved the weather block is hidden. Weather never blocks the page: it loads after the panel, with an 8 second timeout.
-- To preview a different "today", add `?today=YYYY-MM-DD` to the address (for example `index.html?today=2027-01-01`). It changes the countdown, the next-day choice and the forecast window, and shows a "Preview" chip. Nothing else is changed, and the JSON is not modified. The live forecast API only serves real dates, so previews beyond the real window show the out-of-window state or an empty block.
+- Rain wording: 50% or more "Rain likely", 25–49% "Showers possible", under 25% "Dry" (with the %). The modal tip "Bring waterproofs" shows above 50% (or 2 mm or more if no chance is given).
+- Cached in `localStorage` (`vp-wx:*`, with a timestamp): forecasts 3 hours, archive data 30 days; entries older than 30 days are removed. If the network fails a saved copy is used (the modal labels it). If there is nothing saved the weather line is hidden. Weather never blocks the page: it loads after the panel, with an 8 second timeout.
+- To preview a different "today", add `?today=YYYY-MM-DD` to the address (for example `index.html?today=2027-01-01`). It changes the countdown, the next-day choice and the forecast window, and shows the small "Preview" note under the band. Nothing else is changed, and the JSON is not modified. The live forecast API only serves real dates, so previews beyond the real window show the out-of-window state or no weather line.
 
 ## Deploying to GitHub Pages
 
 The portal is static, read-only, and uses only relative URLs, so it works from a project sub-path such as `https://<user>.github.io/<repo>/`. It needs https (GitHub Pages provides it) for the clipboard and share buttons.
 
 1. Upload `index.html`, `tokens.css`, `base.css`, `calendar.css`, `styles.css`, `app.js`, `volunteer_plan_2027.json` and `fonts/`.
-2. Add `volunteer-schedule.pdf` next to `index.html`. It is not in this folder, so the **Download PDF Schedule** link (`./volunteer-schedule.pdf`) is dead until you add it.
+2. Add `volunteer-schedule.pdf` next to `index.html`. It is not in this folder, so the **PDF schedule** link (`./volunteer-schedule.pdf`) is dead until you add it.
 3. Re-export the JSON from the planner whenever the schedule changes and replace `volunteer_plan_2027.json`; the page fetches it with `cache: 'no-store'`.
 4. In the repository settings, choose **Settings, Pages**, then deploy from a branch and select the folder that holds `index.html`.
 5. File names are case-sensitive on GitHub Pages: keep `fonts/NationalTrustTT-Regular.woff2` and `volunteer_plan_2027.json` exactly as written.
-6. Third-party services need no keys: FullCalendar and Lucide (jsDelivr CDN), Leaflet (unpkg), OpenStreetMap tiles, Nominatim, Open-Meteo.
+6. Third-party services need no keys: FullCalendar and Lucide (jsDelivr CDN), Leaflet (unpkg), OpenFreeMap bright map (MapLibre), Nominatim, Open-Meteo.
 
 **Font licence caveat**: *National Trust TT* is a proprietary National Trust typeface. Publishing the `.woff2` (or `nt-font.js`, which embeds the same font as base64) on a public site redistributes it, so confirm you are licensed to serve it publicly before you deploy. If not, delete `fonts/` (and `nt-font.js` for the planner); `--font-display` falls back to Georgia / serif, and the layout does not depend on the font. `nt-font.js` and the `.woff2` are separate copies, so removing one does not affect the other.

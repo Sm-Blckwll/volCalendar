@@ -148,14 +148,6 @@ textarea.input { min-height: 96px; resize: vertical; line-height: var(--leading-
 .container { width: min(100% - var(--space-8), 1200px); margin-inline: auto; }
 .panel { padding: var(--space-6); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-1); }
 .section-title { margin-bottom: var(--space-4); }
-.site-header { position: sticky; top: 0; z-index: var(--z-header); color: var(--text-muted); background: var(--header); border-bottom: 1px solid var(--border); }
-.header-inner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 64px; padding-block: var(--space-2); }
-.brand { display: inline-flex; align-items: center; gap: var(--space-3); color: var(--heading); text-decoration: none; }
-.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; color: var(--on-brand); background: var(--brand); border-radius: var(--radius-full); transition: transform var(--dur) var(--ease); }
-.brand:hover .brand-mark { transform: rotate(-8deg) scale(1.06); }
-.brand-mark svg { width: 20px; height: 20px; }
-.brand-title { font: 400 var(--text-lg)/1 var(--font-display); }
-.header-actions { display: flex; align-items: center; gap: var(--space-2); }
 .empty-state { display: grid; place-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-4); color: var(--text-muted); text-align: center; background: var(--surface-alt); border: 1px dashed var(--field-border); border-radius: var(--radius); }
 .empty-state p { max-width: 52ch; }
 .empty-state strong { color: var(--heading); }
@@ -221,3 +213,10 @@ textarea.input { min-height: 96px; resize: vertical; line-height: var(--leading-
 .toast-action { flex: none; min-height: 36px; padding: 0 var(--space-3); color: inherit; background: transparent; border: 1px solid currentColor; border-radius: var(--radius); font: 700 var(--text-sm)/1 var(--font-body); cursor: pointer; transition: background-color var(--dur-fast) var(--ease); }
 .toast-action:hover { background: color-mix(in srgb, currentColor 16%, transparent); }
 @media (max-width: 640px) { .toast { right: var(--space-3); left: var(--space-3); bottom: var(--space-3); max-width: none; } }
+
+/* Footer theme toggle: plain small text link pinned to the bottom of the page. */
+body { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+main { flex: 1 0 auto; }
+.site-footer { margin-top: auto; padding: var(--space-4) var(--space-4) var(--space-6); text-align: center; }
+.text-toggle { padding: var(--space-1) var(--space-2); font: inherit; font-size: var(--text-sm); color: var(--text-muted); background: none; border: 0; border-radius: var(--radius-sm, 4px); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; transition: color var(--dur) var(--ease); }
+.text-toggle:hover { color: var(--brand-text); }
