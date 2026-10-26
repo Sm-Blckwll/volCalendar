@@ -76,6 +76,7 @@ function normaliseEvent(raw, index) {
       description: String(props.description ?? '').trim(),
       equipment: String(props.equipment ?? '').trim(),
       difficulty,
+      ...(cleanWhat3words(props.what3words) ? { what3words: cleanWhat3words(props.what3words) } : {}),
       ...(parking ? { parking } : {}),
       ...(meeting ? { meeting } : {})
     }
@@ -796,17 +797,13 @@ function openEventModal(event) {
   activeEvent = event;
   lastFocusedElement = document.activeElement;
   const props = event.extendedProps;
-  // One plain sentence under the date: "Path work at Brownsham · Moderate difficulty" (parts without data are left out).
-  const siteName = String(props.location || '').trim();
+  // The sheet heading is just the task title; the difficulty is a plain line at the top of "About this task".
+  $('#modal-title').textContent = event.title;
   const level = String(props.difficulty || '').trim();
-  $('#modal-task').textContent = event.title;
-  const at = $('#modal-at');
-  at.hidden = !siteName;
-  at.textContent = siteName ? ` at ${siteName}` : '';
   const levelEl = $('#modal-level');
   levelEl.hidden = !level;
-  levelEl.textContent = level ? ` \u00b7 ${level} difficulty` : '';
-  $('#modal-date').textContent = formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  levelEl.textContent = level ? `${level} difficulty` : '';
+  $('#modal-date').textContent = `${formatDate(event.start, { weekday: 'long' })}, ${formatDate(event.start, { day: 'numeric', month: 'long' })}`;
   const places = placesOf(event);
   const parkLine = $('#modal-parking');
   parkLine.hidden = !places.parking;
@@ -971,19 +968,55 @@ async function renderEventMap(event) {
   map = null;
   setModalLinks(mapLinks(target, location), target, Boolean(parking));
   $('#map-directions').setAttribute('aria-label', target ? `Get directions to ${target.label}` : 'Get directions');
+  setWhat3words(event);
   renderMapLegend(places);
   const result = await mountLocationMap($('#event-map'), { location, parking, meeting }, previous, () => activeEvent === event && !$('#event-modal').hidden);
   map = result.map;
   if (!target && result.coords) setModalLinks(mapLinks(result.coords, location), result.coords, false);
 }
 
+/**
+ * what3words has no keyless way to turn coordinates into a 3-word address, so the link only appears when the words are
+ * supplied: per task as extendedProps.what3words ("word.word.word"), or per site in WHAT3WORDS_BY_SITE (the parking square).
+ */
+const WHAT3WORDS_BY_SITE = {
+  'Brownsham': 'processor.interacts.tint',
+  'Peppercombe': 'flopped.shadowed.code',
+  'East Titchberry': 'pheasants.island.altering',
+  'Dunsland': 'bookshelf.nipped.connects',
+  'Bucks Mills': 'thanks.husky.woodstove',
+  'Abbotsham': 'care.roughness.dented',
+  'Burrough Farm': 'races.animate.defaults',
+  'Kipling Tors': 'reflect.spells.searching', // the Seafield carpark
+  'Brixton Barton': 'promising.flux.scribbled',
+  'Welcombe': 'elbowed.avoid.punctuate'
+};
+/** The site's parking-square words. Custom ("Other") locations have no entry, and a task with its own parking point is not the site's carpark. */
+function siteWhat3words(props) {
+  if (props.parking) return null;
+  const site = String(props.location ?? '').trim().toLocaleLowerCase();
+  const match = Object.keys(WHAT3WORDS_BY_SITE).find((name) => name.toLocaleLowerCase() === site);
+  return match ? cleanWhat3words(WHAT3WORDS_BY_SITE[match]) : null;
+}
+function cleanWhat3words(value) {
+  const words = String(value ?? '').trim().replace(/^\/+/, '').toLocaleLowerCase();
+  return /^[\p{L}\p{N}-]+\.[\p{L}\p{N}-]+\.[\p{L}\p{N}-]+$/u.test(words) ? words : null;
+}
+function setWhat3words(event) {
+  const props = event.extendedProps;
+  const words = cleanWhat3words(props.what3words) || siteWhat3words(props);
+  const link = $('#modal-w3w');
+  link.hidden = !words;
+  if (words) {
+    link.href = `https://what3words.com/${encodeURIComponent(words)}`;
+    link.setAttribute('aria-label', `what3words address ${words}, opens in a new tab`);
+  }
+}
+
 /** Directions links in the task modal. Without coordinates they search by place name. */
 function setModalLinks(links, coords, isParking = false) {
   $('#map-directions').href = links.google;
   $('#modal-apple').href = links.apple;
-  const osm = $('#modal-osm');
-  osm.hidden = !links.osm;
-  if (links.osm) osm.href = links.osm;
   const copy = $('#modal-copy-coords');
   copy.hidden = !coords;
   if (coords) {

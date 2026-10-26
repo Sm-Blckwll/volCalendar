@@ -63,7 +63,9 @@
 .map-links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .map-links .button { min-height: var(--control-h); }
 .map-links .map-primary { flex: 1 1 100%; min-height: 48px; font-size: var(--text-base); }
-.map-links .map-alt { flex: 1 1 calc(50% - var(--space-1)); min-width: 0; }
+.map-text-links { flex: 1 1 100%; display: flex; flex-wrap: wrap; justify-content: center; column-gap: var(--space-4); }
+.map-text-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-2); color: var(--brand-text); font-size: var(--text-sm); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.map-text-link[hidden] { display: none; }
 .map-links .button[hidden], .coords-button[hidden] { display: none; }
 .coords-button { display: inline-flex; flex: 1 1 100%; align-items: center; justify-content: flex-start; gap: var(--space-2); min-height: var(--control-h); padding: 0; color: var(--text-muted); background: none; border: 0; border-radius: var(--radius); font: 600 var(--text-sm)/1.2 var(--font-body); font-variant-numeric: tabular-nums; cursor: pointer; }
 .coords-button svg { width: 16px; height: 16px; flex: none; color: var(--brand-text); }
@@ -95,11 +97,11 @@
 /* Task detail modal ------------------------------------------------------------ */
 /* Task sheet top: the date leads, then one plain sentence "Task at Site · Level difficulty". */
 .modal-heading { display: grid; gap: var(--space-2); min-width: 0; }
-.modal-date { display: flex; align-items: flex-start; gap: var(--space-3); margin: 0; color: var(--heading); font: 400 clamp(1.25rem, 1rem + 1.8vw, 1.75rem)/1.2 var(--font-display); overflow-wrap: anywhere; }
-.modal-date svg { width: 22px; height: 22px; flex: none; margin-top: .12em; color: var(--brand-text); }
-.modal-header .modal-summary { margin: 0; color: var(--text-muted); font: 400 var(--text-base)/1.4 var(--font-body); overflow-wrap: anywhere; }
-.modal-summary strong { color: var(--heading); font-weight: 700; }
-.modal-summary span[hidden] { display: none; }
+.modal-date { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-muted); font: 400 var(--text-md)/1.25 var(--font-body); overflow-wrap: anywhere; }
+.modal-date svg { width: 18px; height: 18px; flex: none; color: var(--brand-text); }
+.modal-header .modal-summary { margin: 0; color: var(--heading); font: 400 var(--text-xl)/1.15 var(--font-display); overflow-wrap: anywhere; }
+.detail-level { margin: 0 0 var(--space-2); color: var(--text-muted); font-size: var(--text-sm); font-weight: 600; }
+.detail-level[hidden] { display: none; }
 .where-places { display: grid; gap: var(--space-2); }
 .where-places:not(:has(.where-line:not([hidden]))) { display: none; }
 .where-line { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text); font-size: var(--text-sm); font-weight: 600; }
@@ -161,8 +163,7 @@
 
 /* Task sheet footer: Share and Add to Calendar side by side, equal width (the X at the top closes the sheet). */
 .modal-footer { gap: var(--space-3); padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); }
-.modal-footer .button { flex: 1 1 0; min-width: 0; max-width: 240px; }
-@media (max-width: 640px) { .modal-footer .button { max-width: none; } }
+.modal-footer .button { flex: 1 1 0; min-width: 0; }
 @media (max-width: 360px) {
   .modal-footer { gap: var(--space-2); }
   .modal-footer .button { padding: 0 var(--space-2); gap: 6px; }
