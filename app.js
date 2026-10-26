@@ -796,20 +796,25 @@ function openEventModal(event) {
   activeEvent = event;
   lastFocusedElement = document.activeElement;
   const props = event.extendedProps;
-  $('#modal-title').textContent = event.title;
+  // One plain sentence under the date: "Path work at Brownsham · Moderate difficulty" (parts without data are left out).
+  const siteName = String(props.location || '').trim();
+  const level = String(props.difficulty || '').trim();
+  $('#modal-task').textContent = event.title;
+  const at = $('#modal-at');
+  at.hidden = !siteName;
+  at.textContent = siteName ? ` at ${siteName}` : '';
+  const levelEl = $('#modal-level');
+  levelEl.hidden = !level;
+  levelEl.textContent = level ? ` \u00b7 ${level} difficulty` : '';
   $('#modal-date').textContent = formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  $('#modal-location').textContent = props.location || 'Location to be confirmed';
   const places = placesOf(event);
   const parkLine = $('#modal-parking');
   parkLine.hidden = !places.parking;
-  parkLine.textContent = places.parking ? `Park at: ${places.parking.label}` : '';
+  setText('#modal-parking-text', places.parking ? `Park at: ${places.parking.label}` : '');
   const meetLine = $('#modal-meeting');
   meetLine.hidden = !places.showMeet;
-  meetLine.textContent = places.showMeet ? `Meet at: ${places.meeting.label}` : '';
+  setText('#modal-meeting-text', places.showMeet ? `Meet at: ${places.meeting.label}` : '');
   $('#modal-description').textContent = props.description || 'No description provided for this task.';
-  const badge = $('#modal-difficulty');
-  badge.className = `difficulty-badge badge-${difficultyClass(props.difficulty)}`;
-  badge.textContent = props.difficulty || 'Moderate';
 
   const equipmentContainer = $('#modal-equipment');
   equipmentContainer.replaceChildren();
@@ -1172,7 +1177,6 @@ function bindControls() {
   $('#modal-copy-coords').addEventListener('click', async () => showToast(await copyText(modalCoordsText) ? 'Coordinates copied' : 'Could not copy the coordinates'));
   $('#download-event-ics').addEventListener('click', () => { if (activeEvent) generateICS([activeEvent], `${slugify(activeEvent.title)}-2027.ics`); });
   $('#close-modal').addEventListener('click', closeEventModal);
-  $('#modal-close-secondary').addEventListener('click', closeEventModal);
   $('#event-modal').addEventListener('click', closeOnBackdrop);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeEventModal();

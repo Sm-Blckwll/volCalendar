@@ -105,35 +105,36 @@
   <div class="modal-backdrop" id="event-modal" aria-hidden="true" hidden>
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-date">
       <header class="modal-header">
-        <div>
-          <h2 id="modal-title">Task details</h2>
-          <p class="modal-sub"><i data-lucide="calendar-days" aria-hidden="true"></i><span id="modal-date"></span></p>
+        <div class="modal-heading">
+          <p class="modal-date"><i data-lucide="calendar-days" aria-hidden="true"></i><span id="modal-date"></span></p>
+          <h2 id="modal-title" class="modal-summary"><strong id="modal-task">Task details</strong><span id="modal-at" hidden></span><span id="modal-level" hidden></span></h2>
         </div>
         <button class="button button-quiet button-icon" type="button" id="close-modal" aria-label="Close task details"><i data-lucide="x" aria-hidden="true"></i></button>
       </header>
       <div class="modal-body">
-        <div class="modal-facts">
-          <div class="fact-item"><span class="fact-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><span class="fact-label">Location</span><strong id="modal-location">—</strong><span class="fact-sub" id="modal-parking" hidden></span><span class="fact-sub" id="modal-meeting" hidden></span></div></div>
-          <div class="fact-item"><span class="fact-icon"><i data-lucide="gauge" aria-hidden="true"></i></span><div><span class="fact-label">Difficulty</span><strong><span id="modal-difficulty" class="difficulty-badge badge-moderate">Moderate</span></strong></div></div>
-        </div>
         <div class="steps steps-icons">
           <section class="step" aria-labelledby="description-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="file-text"></i></span><div class="step-head"><h3 id="description-heading">About this task</h3></div><p id="modal-description" class="detail-description">No description provided.</p></section>
           <section class="step" aria-labelledby="equipment-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="backpack"></i></span><div class="step-head"><h3 id="equipment-heading">What to bring</h3></div><div id="modal-equipment" class="equipment-list"><span class="muted-copy">No equipment listed.</span></div></section>
           <section class="step" id="modal-weather-step" aria-labelledby="weather-heading" hidden><span class="step-marker" aria-hidden="true"><i data-lucide="cloud-sun"></i></span><div class="step-head"><h3 id="weather-heading">Forecast</h3></div><div id="modal-weather"></div></section>
-          <section class="step" aria-labelledby="map-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="map"></i></span><div class="step-head"><h3 id="map-heading">Where</h3></div><div id="event-map" class="event-map" role="region" aria-label="Map showing task location"><div class="map-placeholder">The location map will appear here.</div></div>
-            <p class="map-legend" id="map-legend" hidden></p>
-            <div class="map-links">
-              <a id="map-directions" class="button button-sm button-primary" href="#" target="_blank" rel="noopener noreferrer"><i data-lucide="navigation" aria-hidden="true"></i><span>Get directions</span></a>
-              <a id="modal-apple" class="text-link" href="#" target="_blank" rel="noopener noreferrer">Apple Maps</a>
-              <a id="modal-osm" class="text-link" href="#" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
-              <button id="modal-copy-coords" class="text-link text-button" type="button" hidden><i data-lucide="copy" aria-hidden="true"></i><span id="modal-coords"></span></button>
+          <section class="step" aria-labelledby="map-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="map"></i></span><div class="step-head"><h3 id="map-heading">Where</h3></div><div class="where-body">
+              <div class="where-places" id="modal-places">
+                <p class="where-line" id="modal-parking" hidden><span class="place-badge place-badge-sm" aria-hidden="true">P</span><span id="modal-parking-text"></span></p>
+                <p class="where-line" id="modal-meeting" hidden><i class="place-pin" aria-hidden="true"></i><span id="modal-meeting-text"></span></p>
+              </div>
+              <div id="event-map" class="event-map" role="region" aria-label="Map showing task location"><div class="map-placeholder">The location map will appear here.</div></div>
+              <p class="map-legend" id="map-legend" hidden></p>
+              <div class="map-links">
+                <a id="map-directions" class="button button-primary map-primary" href="#" target="_blank" rel="noopener noreferrer"><i data-lucide="navigation" aria-hidden="true"></i><span>Get directions</span></a>
+                <a id="modal-apple" class="button map-alt" href="#" target="_blank" rel="noopener noreferrer">Apple Maps</a>
+                <a id="modal-osm" class="button map-alt" href="#" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+                <button id="modal-copy-coords" class="coords-button" type="button" hidden><i data-lucide="copy" aria-hidden="true"></i><span id="modal-coords"></span></button>
+              </div>
             </div></section>
         </div>
       </div>
       <footer class="modal-footer">
-        <button class="button button-ghost" type="button" id="modal-close-secondary">Close</button>
         <button class="button" type="button" id="modal-share"><i data-lucide="share-2" aria-hidden="true"></i><span>Share</span></button>
-        <button class="button button-primary button-lg" type="button" id="download-event-ics"><i data-lucide="calendar-plus" aria-hidden="true"></i> Add to My Calendar</button>
+        <button class="button button-primary" type="button" id="download-event-ics"><i data-lucide="calendar-plus" aria-hidden="true"></i><span>Add to Calendar</span></button>
       </footer>
     </section>
   </div>
