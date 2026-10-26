@@ -1,8 +1,8 @@
 /* Service worker: lets the portal open offline once it has been loaded once.
    Own files: network first (volunteers always get the latest plan), cached copy when offline.
    Library files from CDNs: cache first. Weather, maps and geocoding are never cached. */
-const CACHE = 'volunteer-portal-v1';
-const SHELL = ['./', './index.html', './tokens.css', './base.css', './calendar.css', './styles.css', './app.js',
+const CACHE = 'volunteer-portal-v3';
+const SHELL = ['./', './index.html', './tokens.css', './base.css', './calendar.css', './styles.css', './locations.js', './app.js',
   './volunteer_plan_2027.json', './_DSC0363.webp', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const LIBRARY_HOSTS = ['unpkg.com', 'cdn.jsdelivr.net'];
 

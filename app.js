@@ -20,6 +20,13 @@ let lastFocusedElement = null;
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+/**
+ * Meeting points come from locations.js (shared with the planner): a task's own `meeting`
+ * { label, lat, lon } if the manager set one, otherwise the site's default carpark.
+ * Returns { label, lat, lon, isDefault } or null (then the location name is geocoded instead).
+ */
+const meetingOf = (event) => (window.VOL_MEETING ? window.VOL_MEETING.meetingFor(event.extendedProps.location, event.extendedProps.meeting) : null);
+
 const ICONS = {
   calendar: '<i data-lucide="calendar-days" aria-hidden="true"></i>',
   pin: '<i data-lucide="map-pin" aria-hidden="true"></i>',
@@ -48,6 +55,8 @@ function normaliseEvent(raw, index) {
   const allowedDifficulty = ['Easy', 'Moderate', 'Strenuous'];
   const difficultyValue = String(props.difficulty ?? 'Moderate').trim();
   const difficulty = allowedDifficulty.includes(difficultyValue) ? difficultyValue : 'Moderate';
+  // Optional exact meeting point; an invalid value is ignored (the site default or geocoding is used instead).
+  const meeting = window.VOL_MEETING ? window.VOL_MEETING.clean(props.meeting) : null;
   const event = {
     id: String(raw.id ?? `schedule-item-${index + 1}`),
     title,
@@ -57,7 +66,8 @@ function normaliseEvent(raw, index) {
       location: String(props.location ?? 'Unspecified location').trim() || 'Unspecified location',
       description: String(props.description ?? '').trim(),
       equipment: String(props.equipment ?? '').trim(),
-      difficulty
+      difficulty,
+      ...(meeting ? { meeting } : {})
     }
   };
   if (raw.end) event.end = String(raw.end);
@@ -285,6 +295,11 @@ function renderNextDay() {
   countdown.textContent = countdownLabel(days);
   $('#next-meta').hidden = false;
   setText('#next-location', props.location);
+  // "Meet at: <label>" sits beside the site name, only when there is an exact meeting point.
+  const meeting = meetingOf(event);
+  const meet = $('#next-meet');
+  meet.hidden = !meeting;
+  meet.textContent = meeting ? `Meet at: ${meeting.label}` : '';
   const note = $('#next-note');
   note.hidden = pick.isUpcoming;
   note.textContent = pick.isUpcoming ? '' : 'There are no upcoming volunteer days yet, so this is the most recent one.';
@@ -313,10 +328,20 @@ function renderNextDay() {
   loadNextDayPlace(event, days, pick.isUpcoming);
 }
 
-/** Directions work straight away (by place name); once the place is found they use exact coordinates and the weather loads. */
+/**
+ * Directions and weather use the exact meeting point when there is one (no lookup needed).
+ * Otherwise directions work straight away by place name, then upgrade once the name is geocoded.
+ */
 async function loadNextDayPlace(event, days, isUpcoming) {
   const location = event.extendedProps.location;
   const isCurrent = () => nextEvent === event;
+  const meeting = meetingOf(event);
+  if (meeting) {
+    const exact = { lat: meeting.lat, lon: meeting.lon };
+    $('#next-directions').href = mapLinks(exact, location).google;
+    if (isUpcoming) renderWeather(event, exact, days).catch((error) => console.warn('Weather unavailable:', error));
+    return;
+  }
   $('#next-directions').href = mapLinks(null, location).google;
   let coords = null;
   try {
@@ -557,7 +582,8 @@ async function shareEvent(event) {
   if (!event) return;
   const props = event.extendedProps;
   const url = `${window.location.origin}${window.location.pathname}`;
-  const text = `Volunteer day: ${event.title} at ${props.location}, ${formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long' })}.`;
+  const meeting = meetingOf(event);
+  const text = `Volunteer day: ${event.title} at ${props.location}${meeting ? ` (meet at ${meeting.label})` : ''}, ${formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long' })}.`;
   if (navigator.share) {
     try {
       await navigator.share({ title: 'Volunteer Plan 2027', text, url });
@@ -643,7 +669,7 @@ function filteredEvents() {
     const props = event.extendedProps;
     const matchesLocation = !location || props.location === location;
     const matchesDifficulty = !difficulty || props.difficulty === difficulty;
-    const searchable = [event.title, props.location, props.description, props.equipment, props.difficulty, formatDate(event.start)].join(' ').toLocaleLowerCase();
+    const searchable = [event.title, props.location, meetingOf(event)?.label, props.description, props.equipment, props.difficulty, formatDate(event.start)].join(' ').toLocaleLowerCase();
     return matchesLocation && matchesDifficulty && (!query || searchable.includes(query));
   });
 }
@@ -725,7 +751,16 @@ function createTaskCard(event) {
   equipment.className = 'task-equipment-summary';
   equipment.innerHTML = `${ICONS.box}<span>${equipmentCount ? `${equipmentCount} ${equipmentCount === 1 ? 'thing' : 'things'} to bring` : 'Things to bring not specified'}</span>`;
   meta.appendChild(equipment);
-  main.append(title, description, meta);
+  // A quiet "Meet at" line, only when the manager chose a spot other than the site's carpark.
+  const meeting = meetingOf(event);
+  if (meeting && !meeting.isDefault) {
+    const meet = document.createElement('p');
+    meet.className = 'task-card-meet';
+    meet.innerHTML = `${ICONS.pin}<span>Meet at: ${escapeHTML(meeting.label)}</span>`;
+    main.append(title, description, meet, meta);
+  } else {
+    main.append(title, description, meta);
+  }
 
   const actions = document.createElement('div');
   actions.className = 'task-card-actions';
@@ -747,6 +782,10 @@ function openEventModal(event) {
   $('#modal-title').textContent = event.title;
   $('#modal-date').textContent = formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('#modal-location').textContent = props.location || 'Location to be confirmed';
+  const meeting = meetingOf(event);
+  const meetLine = $('#modal-meeting');
+  meetLine.hidden = !meeting;
+  meetLine.textContent = meeting ? `Meet at: ${meeting.label}` : '';
   $('#modal-description').textContent = props.description || 'No description provided for this task.';
   const badge = $('#modal-difficulty');
   badge.className = `difficulty-badge badge-${difficultyClass(props.difficulty)}`;
@@ -775,7 +814,7 @@ function openEventModal(event) {
   document.body.style.overflow = 'hidden';
   $('#close-modal').focus();
   refreshIcons();
-  renderEventMap(props.location);
+  renderEventMap(event);
   $('#download-event-ics').disabled = false;
 }
 
@@ -806,11 +845,13 @@ function mapLinks(coords, location) {
 }
 
 /**
- * Draw a Leaflet map for a named place inside `element` (modal and next-day panel share this).
+ * Draw a map inside `element` for `place` = { location, coords?, label? }.
+ * With exact `coords` (a meeting point) nothing is looked up; otherwise the location name is geocoded.
  * `previous` is disposed first; `isCurrent()` lets callers drop results that arrive late.
  * Resolves to { map, coords }.
  */
-async function mountLocationMap(element, location, previous, isCurrent) {
+async function mountLocationMap(element, place, previous, isCurrent) {
+  const { location } = place;
   // Leaflet owns the element's children, so dispose the old instance before reusing it.
   if (previous) previous.remove();
   element.innerHTML = '<div class="map-placeholder">Finding this location on the map…</div>';
@@ -819,17 +860,17 @@ async function mountLocationMap(element, location, previous, isCurrent) {
     return { map: null, coords: null };
   }
   try {
-    const coords = await geocodeLocation(location);
+    const coords = place.coords || await geocodeLocation(location);
     if (!isCurrent()) return { map: null, coords };
     element.innerHTML = '';
     const view = coords ? [coords.lat, coords.lon] : MAP_FALLBACK;
-    const instance = L.map(element, { scrollWheelZoom: false, attributionControl: false }).setView(view, coords ? 14 : 10, { animate: false });
+    const instance = L.map(element, { scrollWheelZoom: false, attributionControl: false }).setView(view, place.coords ? 15 : coords ? 14 : 10, { animate: false });
     L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/bright', attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(instance);
     L.control.attribution({ prefix: false }).addTo(instance);
     const icon = L.divIcon({ className: '', html: '<span class="custom-map-marker"><i data-lucide="map-pin" aria-hidden="true"></i></span>', iconSize: [32, 36], iconAnchor: [16, 34] });
     const marker = L.marker(view, { icon }).addTo(instance);
     if (coords) {
-      marker.bindPopup(escapeHTML(location));
+      marker.bindPopup(escapeHTML(place.label || location));
     } else {
       const notice = document.createElement('div');
       notice.className = 'map-inline-note';
@@ -846,14 +887,17 @@ async function mountLocationMap(element, location, previous, isCurrent) {
   }
 }
 
-async function renderEventMap(location) {
+/** The modal map: pinned at the meeting point when there is one, else at the geocoded location name. */
+async function renderEventMap(event) {
+  const location = event.extendedProps.location;
+  const meeting = meetingOf(event);
+  const exact = meeting ? { lat: meeting.lat, lon: meeting.lon } : null;
   const previous = map;
   map = null;
-  const links = mapLinks(null, location);
-  setModalLinks(links, null);
-  const result = await mountLocationMap($('#event-map'), location, previous, () => Boolean(activeEvent) && activeEvent.extendedProps.location === location && !$('#event-modal').hidden);
+  setModalLinks(mapLinks(exact, location), exact);
+  const result = await mountLocationMap($('#event-map'), { location, coords: exact, label: meeting?.label }, previous, () => activeEvent === event && !$('#event-modal').hidden);
   map = result.map;
-  if (result.coords) setModalLinks(mapLinks(result.coords, location), result.coords);
+  if (!exact && result.coords) setModalLinks(mapLinks(result.coords, location), result.coords);
 }
 
 /** Directions links in the task modal. Without coordinates they search by place name. */
@@ -876,22 +920,8 @@ async function geocodeLocation(location) {
   const key = String(location ?? '').trim().toLocaleLowerCase();
   if (!key) return null;
   if (GEO_CACHE.has(key)) return GEO_CACHE.get(key);
-  // Approximate locality coordinates for the three named North Devon sites.
-  // Source references: https://thegreatbritainguide.com/place/brownsham/
-  // https://thegreatbritainguide.com/place/peppercombe/
-  // https://historicengland.org.uk/listing/heritage-gateway/results/record/c39bc47e-3b72-4a06-9863-681629e456a2/MDV30768
-  // Other location labels are geocoded via Nominatim when opened.
-  const knownSites = {
-    'brownsham': { lat: 51.0076, lon: -4.4452 },
-    'peppercombe': { lat: 50.9953, lon: -4.3075 },
-    'east titchberry': { lat: 51.016116, lon: -4.504472 }
-  };
-  if (Object.prototype.hasOwnProperty.call(knownSites, key)) {
-    const value = knownSites[key];
-    GEO_CACHE.set(key, value);
-    if (value) return value;
-    // An event series label is not itself a mappable place; try searching it below.
-  }
+  // Preset sites never reach this point: they have exact meeting points (locations.js).
+  // Anything else ('Other' locations such as Explorer Days) is looked up by name via Nominatim when needed.
   const queries = [`${location}, North Devon, Devon, United Kingdom`, `${location}, Devon, United Kingdom`];
   for (const query of queries) {
     try {
@@ -989,7 +1019,10 @@ function eventToICS(event) {
   const props = event.extendedProps;
   const stamp = icsDateTime(new Date().toISOString());
   const safeId = escapeICSText(event.id || `${Date.now()}`);
+  const meeting = meetingOf(event);
   const description = [
+    meeting ? `Meet at: ${meeting.label}` : '',
+    meeting ? `Directions: ${mapLinks(meeting, props.location).google}` : '',
     props.description ? `Description: ${props.description}` : '',
     props.equipment ? `Required equipment: ${props.equipment}` : '',
     props.difficulty ? `Difficulty: ${props.difficulty}` : ''
@@ -1009,7 +1042,9 @@ function eventToICS(event) {
   }
   lines.push(
     `SUMMARY:${escapeICSText(event.title)}`,
-    `LOCATION:${escapeICSText(props.location || '')}`,
+    `LOCATION:${escapeICSText(meeting ? `${meeting.label}, ${props.location}` : props.location || '')}`,
+    // GEO lets calendar apps that support it show the exact meeting point.
+    ...(meeting ? [`GEO:${meeting.lat.toFixed(6)};${meeting.lon.toFixed(6)}`] : []),
     `DESCRIPTION:${escapeICSText(description)}`,
     'END:VEVENT'
   );

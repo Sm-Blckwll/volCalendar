@@ -24,7 +24,7 @@ python -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-The page uses CDN-hosted FullCalendar, Leaflet and Lucide assets, OpenFreeMap bright vector map (OpenStreetMap data, free, no key), and Nominatim for geocoding location names that are not pre-mapped. These features need an internet connection. The three named North Devon localities Brownsham, Peppercombe and East Titchberry have approximate map coordinates; other locations use geocoding when a volunteer opens an event.
+The page uses CDN-hosted FullCalendar, Leaflet and Lucide assets, OpenFreeMap bright vector map (OpenStreetMap data, free, no key), and Nominatim for geocoding location names that have no exact meeting point. These features need an internet connection. Preset sites have exact meeting points (see Meeting points), so they are never geocoded.
 
 ## Supported event fields
 
@@ -80,7 +80,31 @@ Clicking or tapping the title, or **Details**, opens the existing task modal for
 
 If no day is upcoming the band shows the most recent day, labelled "Most recent volunteer day" (no weather, no countdown). If the file is empty it shows a short "No volunteer days yet" message.
 
-**Map and directions**: the map lives only in the modal (`mountLocationMap`, Leaflet / OpenStreetMap / Nominatim with an in-memory geocode cache). The band's Directions button works immediately with a place-name link and is upgraded to exact coordinates once the location is geocoded: `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>` (no key); Apple Maps is `maps.apple.com/?daddr=` and OpenStreetMap is `openstreetmap.org/directions?to=`. If the location cannot be geocoded, the links fall back to a place-name search and the coordinates and OpenStreetMap links are hidden.
+**Meeting points**: each preset site has a fixed default meeting point (its carpark) in `locations.js` (`window.VOL_SITES`; an identical copy is used by the planner, so keep the two files the same). A task can optionally override it with `extendedProps.meeting`:
+
+```json
+{
+  "id": "task_…",
+  "title": "Path work",
+  "start": "2027-01-06",
+  "allDay": true,
+  "extendedProps": {
+    "location": "Brownsham",
+    "description": "",
+    "equipment": "",
+    "difficulty": "Moderate",
+    "meeting": { "label": "Gate by the church", "lat": 51.0071, "lon": -4.4428 }
+  }
+}
+```
+
+- No `meeting` on a task means "use the site's default". Old JSON files keep working; an invalid `meeting` (non-numeric or out-of-range coordinates) is ignored.
+- A custom ("Other") location, such as Explorer Days, has no default. If the manager did not drop a pin, the app falls back to geocoding the location name with Nominatim, as before.
+- The band shows the site name plus "Meet at: <label>". Directions, the weather lookup, the map pin, the Apple/OpenStreetMap links, the copy-coordinates button and the `.ics` export (LOCATION, GEO and a "Meet at" / directions line in the description) all use the meeting point's exact latitude/longitude, with no geocoding. Weather caching and the "Forecast for X" text still use the site name.
+- Task cards only show a "Meet at" line when the meeting point is not the default carpark.
+- The Kipling Tors site is the Westward Ho! carpark.
+
+**Map and directions**: the map lives only in the modal (`mountLocationMap`, Leaflet / OpenFreeMap). With a meeting point it is centred on the exact coordinates with no geocoding; otherwise it geocodes the location name (Nominatim, in-memory cache). Google directions are `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>` (no key); Apple Maps is `maps.apple.com/?daddr=` and OpenStreetMap is `openstreetmap.org/directions?to=`. If a place can be neither found nor geocoded, the links fall back to a place-name search and the coordinates and OpenStreetMap links are hidden.
 
 **Weather** (Open-Meteo, free, no API key, CORS enabled, so it works from GitHub Pages). The logic and caching are unchanged; only the presentation is smaller:
 

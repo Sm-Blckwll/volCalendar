@@ -27,6 +27,7 @@
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" defer></script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js" defer></script>
   <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="./locations.js"></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -40,7 +41,7 @@
         <p class="eyebrow" id="next-heading">Next volunteer day</p>
         <h1 class="next-title"><button class="title-link" id="next-title" type="button" disabled>Loading…</button></h1>
         <p class="next-when"><span id="next-date"></span><span class="countdown" id="next-countdown" hidden></span></p>
-        <p class="next-where" id="next-meta" hidden><i data-lucide="map-pin" aria-hidden="true"></i><span id="next-location"></span></p>
+        <p class="next-where" id="next-meta" hidden><i data-lucide="map-pin" aria-hidden="true"></i><span id="next-location"></span><span class="next-meet" id="next-meet" hidden></span></p>
         <p class="next-also" id="next-also" hidden>Also: <span id="next-also-list"></span></p>
         <p class="next-note" id="next-note" hidden></p>
       </div>
@@ -112,7 +113,7 @@
       </header>
       <div class="modal-body">
         <div class="modal-facts">
-          <div class="fact-item"><span class="fact-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><span class="fact-label">Location</span><strong id="modal-location">—</strong></div></div>
+          <div class="fact-item"><span class="fact-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><span class="fact-label">Location</span><strong id="modal-location">—</strong><span class="fact-sub" id="modal-meeting" hidden></span></div></div>
           <div class="fact-item"><span class="fact-icon"><i data-lucide="gauge" aria-hidden="true"></i></span><div><span class="fact-label">Difficulty</span><strong><span id="modal-difficulty" class="difficulty-badge badge-moderate">Moderate</span></strong></div></div>
         </div>
         <div class="steps steps-icons">
