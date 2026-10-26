@@ -84,6 +84,12 @@
   --shadow-2: 0 6px 16px rgba(33, 33, 33, .12), 0 1px 3px rgba(33, 33, 33, .08);
   --shadow-3: 0 24px 48px rgba(33, 33, 33, .28);
   --scrim: rgba(33, 33, 33, .6);
+  /* Map markers: parking is a see-through blue circle with a dashed border and a P; the meeting point is the brand-green pin. */
+  --map-parking: #1a73e8;
+  --map-parking-fill: rgba(26, 115, 232, .25);
+  --map-parking-ink: #0b57d0;       /* the P on the map (the map stays light, even in the dark theme) */
+  --map-parking-text: #0b57d0;      /* the P badge on the page itself */
+  --map-halo: rgba(255, 255, 255, .85);
   --map-filter: none;
 
   /* Motion ----------------------------------------------------------------- */
@@ -105,6 +111,7 @@
 
 html.dark {
   color-scheme: dark;
+  --map-parking-text: #8ab4f8;
   --brand: #4cc38a;
   --brand-hover: #6fd6a3;
   --brand-text: #4cc38a;

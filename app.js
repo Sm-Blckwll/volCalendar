@@ -21,11 +21,19 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 /**
- * Meeting points come from locations.js (shared with the planner): a task's own `meeting`
- * { label, lat, lon } if the manager set one, otherwise the site's default carpark.
- * Returns { label, lat, lon, isDefault } or null (then the location name is geocoded instead).
+ * Parking and meeting points come from locations.js (shared with the planner).
+ * - parking: where volunteers park (the task's own `parking`, else the site's carpark). Directions go here.
+ * - meeting: where they meet (the task's own `meeting`, else the site's default, else the parking).
+ * - showMeet: say "Meet at" only when it is somewhere other than the parking.
+ * - target: the point directions and weather use: the parking; only a task with no parking at all (an older
+ *   file with just a `meeting`) falls back to its meeting point. null = geocode the location name instead.
  */
-const meetingOf = (event) => (window.VOL_MEETING ? window.VOL_MEETING.meetingFor(event.extendedProps.location, event.extendedProps.meeting) : null);
+function placesOf(event) {
+  const api = window.VOL_PLACES || window.VOL_MEETING;
+  if (!api) return { parking: null, meeting: null, separate: false, showMeet: false, target: null };
+  const { parking, meeting, separate } = api.placesFor(event);
+  return { parking, meeting, separate, showMeet: Boolean(meeting && (!parking || separate)), target: parking || meeting || null };
+}
 
 const ICONS = {
   calendar: '<i data-lucide="calendar-days" aria-hidden="true"></i>',
@@ -55,7 +63,8 @@ function normaliseEvent(raw, index) {
   const allowedDifficulty = ['Easy', 'Moderate', 'Strenuous'];
   const difficultyValue = String(props.difficulty ?? 'Moderate').trim();
   const difficulty = allowedDifficulty.includes(difficultyValue) ? difficultyValue : 'Moderate';
-  // Optional exact meeting point; an invalid value is ignored (the site default or geocoding is used instead).
+  // Optional exact parking and meeting points; an invalid value is ignored (the site default or geocoding is used instead).
+  const parking = window.VOL_MEETING ? window.VOL_MEETING.cleanParking(props.parking) : null;
   const meeting = window.VOL_MEETING ? window.VOL_MEETING.clean(props.meeting) : null;
   const event = {
     id: String(raw.id ?? `schedule-item-${index + 1}`),
@@ -67,6 +76,7 @@ function normaliseEvent(raw, index) {
       description: String(props.description ?? '').trim(),
       equipment: String(props.equipment ?? '').trim(),
       difficulty,
+      ...(parking ? { parking } : {}),
       ...(meeting ? { meeting } : {})
     }
   };
@@ -295,11 +305,14 @@ function renderNextDay() {
   countdown.textContent = countdownLabel(days);
   $('#next-meta').hidden = false;
   setText('#next-location', props.location);
-  // "Meet at: <label>" sits beside the site name, only when there is an exact meeting point.
-  const meeting = meetingOf(event);
+  // "Park at: <label>" sits beside the site name, and "Meet at: <label>" only when the meeting point is somewhere else.
+  const places = placesOf(event);
+  const park = $('#next-park');
+  park.hidden = !places.parking;
+  park.textContent = places.parking ? `Park at: ${places.parking.label}` : '';
   const meet = $('#next-meet');
-  meet.hidden = !meeting;
-  meet.textContent = meeting ? `Meet at: ${meeting.label}` : '';
+  meet.hidden = !places.showMeet;
+  meet.textContent = places.showMeet ? `Meet at: ${places.meeting.label}` : '';
   const note = $('#next-note');
   note.hidden = pick.isUpcoming;
   note.textContent = pick.isUpcoming ? '' : 'There are no upcoming volunteer days yet, so this is the most recent one.';
@@ -329,20 +342,23 @@ function renderNextDay() {
 }
 
 /**
- * Directions and weather use the exact meeting point when there is one (no lookup needed).
+ * Directions and weather use the parking (the carpark) when it is known (no lookup needed), never the meeting point.
  * Otherwise directions work straight away by place name, then upgrade once the name is geocoded.
  */
 async function loadNextDayPlace(event, days, isUpcoming) {
   const location = event.extendedProps.location;
   const isCurrent = () => nextEvent === event;
-  const meeting = meetingOf(event);
-  if (meeting) {
-    const exact = { lat: meeting.lat, lon: meeting.lon };
-    $('#next-directions').href = mapLinks(exact, location).google;
+  const { target } = placesOf(event);
+  const directions = $('#next-directions');
+  if (target) {
+    const exact = { lat: target.lat, lon: target.lon };
+    directions.href = mapLinks(exact, location).google;
+    directions.setAttribute('aria-label', `Directions to ${target.label}`);
     if (isUpcoming) renderWeather(event, exact, days).catch((error) => console.warn('Weather unavailable:', error));
     return;
   }
-  $('#next-directions').href = mapLinks(null, location).google;
+  directions.removeAttribute('aria-label');
+  directions.href = mapLinks(null, location).google;
   let coords = null;
   try {
     coords = await geocodeLocation(location);
@@ -582,8 +598,9 @@ async function shareEvent(event) {
   if (!event) return;
   const props = event.extendedProps;
   const url = `${window.location.origin}${window.location.pathname}`;
-  const meeting = meetingOf(event);
-  const text = `Volunteer day: ${event.title} at ${props.location}${meeting ? ` (meet at ${meeting.label})` : ''}, ${formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long' })}.`;
+  const places = placesOf(event);
+  const where = [places.parking ? `park at ${places.parking.label}` : '', places.showMeet ? `meet at ${places.meeting.label}` : ''].filter(Boolean).join(', ');
+  const text = `Volunteer day: ${event.title} at ${props.location}${where ? ` (${where})` : ''}, ${formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long' })}.`;
   if (navigator.share) {
     try {
       await navigator.share({ title: 'Volunteer Plan 2027', text, url });
@@ -669,7 +686,7 @@ function filteredEvents() {
     const props = event.extendedProps;
     const matchesLocation = !location || props.location === location;
     const matchesDifficulty = !difficulty || props.difficulty === difficulty;
-    const searchable = [event.title, props.location, meetingOf(event)?.label, props.description, props.equipment, props.difficulty, formatDate(event.start)].join(' ').toLocaleLowerCase();
+    const searchable = [event.title, props.location, placesOf(event).parking?.label, placesOf(event).meeting?.label, props.description, props.equipment, props.difficulty, formatDate(event.start)].join(' ').toLocaleLowerCase();
     return matchesLocation && matchesDifficulty && (!query || searchable.includes(query));
   });
 }
@@ -751,12 +768,12 @@ function createTaskCard(event) {
   equipment.className = 'task-equipment-summary';
   equipment.innerHTML = `${ICONS.box}<span>${equipmentCount ? `${equipmentCount} ${equipmentCount === 1 ? 'thing' : 'things'} to bring` : 'Things to bring not specified'}</span>`;
   meta.appendChild(equipment);
-  // A quiet "Meet at" line, only when the manager chose a spot other than the site's carpark.
-  const meeting = meetingOf(event);
-  if (meeting && !meeting.isDefault) {
+  // A quiet "Meet at" line, only when the meeting point is somewhere other than the parking.
+  const places = placesOf(event);
+  if (places.showMeet) {
     const meet = document.createElement('p');
     meet.className = 'task-card-meet';
-    meet.innerHTML = `${ICONS.pin}<span>Meet at: ${escapeHTML(meeting.label)}</span>`;
+    meet.innerHTML = `${ICONS.pin}<span>Meet at: ${escapeHTML(places.meeting.label)}</span>`;
     main.append(title, description, meet, meta);
   } else {
     main.append(title, description, meta);
@@ -782,10 +799,13 @@ function openEventModal(event) {
   $('#modal-title').textContent = event.title;
   $('#modal-date').textContent = formatDate(event.start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('#modal-location').textContent = props.location || 'Location to be confirmed';
-  const meeting = meetingOf(event);
+  const places = placesOf(event);
+  const parkLine = $('#modal-parking');
+  parkLine.hidden = !places.parking;
+  parkLine.textContent = places.parking ? `Park at: ${places.parking.label}` : '';
   const meetLine = $('#modal-meeting');
-  meetLine.hidden = !meeting;
-  meetLine.textContent = meeting ? `Meet at: ${meeting.label}` : '';
+  meetLine.hidden = !places.showMeet;
+  meetLine.textContent = places.showMeet ? `Meet at: ${places.meeting.label}` : '';
   $('#modal-description').textContent = props.description || 'No description provided for this task.';
   const badge = $('#modal-difficulty');
   badge.className = `difficulty-badge badge-${difficultyClass(props.difficulty)}`;
@@ -844,14 +864,36 @@ function mapLinks(coords, location) {
   };
 }
 
+/** Parking marker: a blue, dashed, see-through circle with a P (a fixed 36px, so it never scales with the map). */
+function parkingIcon(label) {
+  return L.divIcon({
+    className: 'map-icon',
+    html: `<span class="map-parking" role="img" aria-label="Parking: ${escapeHTML(label)}">P</span>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20]
+  });
+}
+
+/** Meeting marker: the green pin. Sitting on the parking spot it is lifted onto the circle's top edge so both show. */
+function meetingIcon(label, stacked, kind = 'Meeting point') {
+  return L.divIcon({
+    className: 'map-icon',
+    html: `<span class="map-pin-meet" role="img" aria-label="${escapeHTML(kind)}: ${escapeHTML(label)}"></span>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 43.5],
+    popupAnchor: [0, -2]
+  });
+}
+
 /**
- * Draw a map inside `element` for `place` = { location, coords?, label? }.
- * With exact `coords` (a meeting point) nothing is looked up; otherwise the location name is geocoded.
+ * Draw a map inside `element` for `place` = { location, parking?, meeting? } (points are { label, lat, lon }).
+ * Parking is the blue dashed P circle, the meeting point the green pin; with neither, the location name is geocoded.
  * `previous` is disposed first; `isCurrent()` lets callers drop results that arrive late.
  * Resolves to { map, coords }.
  */
 async function mountLocationMap(element, place, previous, isCurrent) {
-  const { location } = place;
+  const { location, parking, meeting } = place;
   // Leaflet owns the element's children, so dispose the old instance before reusing it.
   if (previous) previous.remove();
   element.innerHTML = '<div class="map-placeholder">Finding this location on the map…</div>';
@@ -860,24 +902,42 @@ async function mountLocationMap(element, place, previous, isCurrent) {
     return { map: null, coords: null };
   }
   try {
-    const coords = place.coords || await geocodeLocation(location);
+    const known = parking || meeting;
+    const coords = known ? { lat: known.lat, lon: known.lon } : await geocodeLocation(location);
     if (!isCurrent()) return { map: null, coords };
     element.innerHTML = '';
     const view = coords ? [coords.lat, coords.lon] : MAP_FALLBACK;
-    const instance = L.map(element, { scrollWheelZoom: false, attributionControl: false }).setView(view, place.coords ? 15 : coords ? 14 : 10, { animate: false });
+    const instance = L.map(element, { scrollWheelZoom: false, attributionControl: false }).setView(view, known ? 15 : coords ? 14 : 10, { animate: false });
     L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/bright', attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(instance);
     L.control.attribution({ prefix: false }).addTo(instance);
-    const icon = L.divIcon({ className: '', html: '<span class="custom-map-marker"><i data-lucide="map-pin" aria-hidden="true"></i></span>', iconSize: [32, 36], iconAnchor: [16, 34] });
-    const marker = L.marker(view, { icon }).addTo(instance);
-    if (coords) {
-      marker.bindPopup(escapeHTML(place.label || location));
-    } else {
-      const notice = document.createElement('div');
-      notice.className = 'map-inline-note';
-      notice.textContent = `Could not locate “${location}” precisely. Showing the North Devon area; please confirm the site with the volunteer coordinator.`;
-      element.appendChild(notice);
+    const stacked = Boolean(parking && meeting && window.VOL_MEETING.samePlace(parking, meeting));
+    const points = [];
+    if (parking) {
+      L.marker([parking.lat, parking.lon], { icon: parkingIcon(parking.label), title: `Parking: ${parking.label}` }).addTo(instance)
+        .bindPopup(`Park at: ${escapeHTML(parking.label)}`);
+      points.push([parking.lat, parking.lon]);
     }
-    refreshIcons();
+    if (meeting) {
+      L.marker([meeting.lat, meeting.lon], { icon: meetingIcon(meeting.label, stacked), zIndexOffset: 1000, title: `Meeting point: ${meeting.label}` }).addTo(instance)
+        .bindPopup(`Meet at: ${escapeHTML(meeting.label)}`);
+      points.push([meeting.lat, meeting.lon]);
+    }
+    if (points.length === 2 && !stacked) {
+      // Parking and meeting point are apart: show both.
+      instance.fitBounds(L.latLngBounds(points), { padding: [56, 56], maxZoom: 16, animate: false });
+    }
+    if (!known) {
+      // Nothing stored for this place: a plain green pin at the geocoded name (or the North Devon area).
+      const marker = L.marker(view, { icon: meetingIcon(location, false, 'Location'), title: location }).addTo(instance);
+      if (coords) {
+        marker.bindPopup(escapeHTML(location));
+      } else {
+        const notice = document.createElement('div');
+        notice.className = 'map-inline-note';
+        notice.textContent = `Could not locate “${location}” precisely. Showing the North Devon area; please confirm the site with the volunteer coordinator.`;
+        element.appendChild(notice);
+      }
+    }
     window.setTimeout(() => instance.invalidateSize(true), 80);
     return { map: instance, coords };
   } catch (error) {
@@ -887,21 +947,33 @@ async function mountLocationMap(element, place, previous, isCurrent) {
   }
 }
 
-/** The modal map: pinned at the meeting point when there is one, else at the geocoded location name. */
+/** Small key under the map, listing only the symbols that are on it. */
+function renderMapLegend(places) {
+  const legend = $('#map-legend');
+  const items = [];
+  if (places.parking) items.push('<span class="legend-item"><span class="place-badge place-badge-sm" aria-hidden="true">P</span>Parking (directions go here)</span>');
+  if (places.meeting) items.push('<span class="legend-item"><i class="place-pin" aria-hidden="true"></i>Meeting point</span>');
+  legend.innerHTML = items.join('');
+  legend.hidden = items.length === 0;
+}
+
+/** The modal map: parking and meeting point from the stored data, else the geocoded location name. */
 async function renderEventMap(event) {
   const location = event.extendedProps.location;
-  const meeting = meetingOf(event);
-  const exact = meeting ? { lat: meeting.lat, lon: meeting.lon } : null;
+  const places = placesOf(event);
+  const { parking, meeting, target } = places;
   const previous = map;
   map = null;
-  setModalLinks(mapLinks(exact, location), exact);
-  const result = await mountLocationMap($('#event-map'), { location, coords: exact, label: meeting?.label }, previous, () => activeEvent === event && !$('#event-modal').hidden);
+  setModalLinks(mapLinks(target, location), target, Boolean(parking));
+  $('#map-directions').setAttribute('aria-label', target ? `Get directions to ${target.label}` : 'Get directions');
+  renderMapLegend(places);
+  const result = await mountLocationMap($('#event-map'), { location, parking, meeting }, previous, () => activeEvent === event && !$('#event-modal').hidden);
   map = result.map;
-  if (!exact && result.coords) setModalLinks(mapLinks(result.coords, location), result.coords);
+  if (!target && result.coords) setModalLinks(mapLinks(result.coords, location), result.coords, false);
 }
 
 /** Directions links in the task modal. Without coordinates they search by place name. */
-function setModalLinks(links, coords) {
+function setModalLinks(links, coords, isParking = false) {
   $('#map-directions').href = links.google;
   $('#modal-apple').href = links.apple;
   const osm = $('#modal-osm');
@@ -912,7 +984,7 @@ function setModalLinks(links, coords) {
   if (coords) {
     modalCoordsText = `${coords.lat.toFixed(5)}, ${coords.lon.toFixed(5)}`;
     setText('#modal-coords', modalCoordsText);
-    copy.setAttribute('aria-label', `Copy coordinates ${modalCoordsText}`);
+    copy.setAttribute('aria-label', `Copy ${isParking ? 'parking ' : ''}coordinates ${modalCoordsText}`);
   }
 }
 
@@ -920,7 +992,7 @@ async function geocodeLocation(location) {
   const key = String(location ?? '').trim().toLocaleLowerCase();
   if (!key) return null;
   if (GEO_CACHE.has(key)) return GEO_CACHE.get(key);
-  // Preset sites never reach this point: they have exact meeting points (locations.js).
+  // Preset sites never reach this point: they have exact carparks (locations.js).
   // Anything else ('Other' locations such as Explorer Days) is looked up by name via Nominatim when needed.
   const queries = [`${location}, North Devon, Devon, United Kingdom`, `${location}, Devon, United Kingdom`];
   for (const query of queries) {
@@ -1019,10 +1091,12 @@ function eventToICS(event) {
   const props = event.extendedProps;
   const stamp = icsDateTime(new Date().toISOString());
   const safeId = escapeICSText(event.id || `${Date.now()}`);
-  const meeting = meetingOf(event);
+  const places = placesOf(event);
+  const target = places.target;
   const description = [
-    meeting ? `Meet at: ${meeting.label}` : '',
-    meeting ? `Directions: ${mapLinks(meeting, props.location).google}` : '',
+    places.parking ? `Park at: ${places.parking.label}` : '',
+    places.showMeet ? `Meet at: ${places.meeting.label}` : '',
+    target ? `Directions${places.parking ? ' to the parking' : ''}: ${mapLinks(target, props.location).google}` : '',
     props.description ? `Description: ${props.description}` : '',
     props.equipment ? `Required equipment: ${props.equipment}` : '',
     props.difficulty ? `Difficulty: ${props.difficulty}` : ''
@@ -1042,9 +1116,9 @@ function eventToICS(event) {
   }
   lines.push(
     `SUMMARY:${escapeICSText(event.title)}`,
-    `LOCATION:${escapeICSText(meeting ? `${meeting.label}, ${props.location}` : props.location || '')}`,
-    // GEO lets calendar apps that support it show the exact meeting point.
-    ...(meeting ? [`GEO:${meeting.lat.toFixed(6)};${meeting.lon.toFixed(6)}`] : []),
+    `LOCATION:${escapeICSText(target ? `${target.label}, ${props.location}` : props.location || '')}`,
+    // GEO lets calendar apps that support it show the parking (where directions lead).
+    ...(target ? [`GEO:${target.lat.toFixed(6)};${target.lon.toFixed(6)}`] : []),
     `DESCRIPTION:${escapeICSText(description)}`,
     'END:VEVENT'
   );

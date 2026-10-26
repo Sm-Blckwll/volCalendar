@@ -41,7 +41,7 @@
         <p class="eyebrow" id="next-heading">Next volunteer day</p>
         <h1 class="next-title"><button class="title-link" id="next-title" type="button" disabled>Loading…</button></h1>
         <p class="next-when"><span id="next-date"></span><span class="countdown" id="next-countdown" hidden></span></p>
-        <p class="next-where" id="next-meta" hidden><i data-lucide="map-pin" aria-hidden="true"></i><span id="next-location"></span><span class="next-meet" id="next-meet" hidden></span></p>
+        <p class="next-where" id="next-meta" hidden><i data-lucide="map-pin" aria-hidden="true"></i><span id="next-location"></span><span class="next-meet" id="next-park" hidden></span><span class="next-meet" id="next-meet" hidden></span></p>
         <p class="next-also" id="next-also" hidden>Also: <span id="next-also-list"></span></p>
         <p class="next-note" id="next-note" hidden></p>
       </div>
@@ -113,7 +113,7 @@
       </header>
       <div class="modal-body">
         <div class="modal-facts">
-          <div class="fact-item"><span class="fact-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><span class="fact-label">Location</span><strong id="modal-location">—</strong><span class="fact-sub" id="modal-meeting" hidden></span></div></div>
+          <div class="fact-item"><span class="fact-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span><div><span class="fact-label">Location</span><strong id="modal-location">—</strong><span class="fact-sub" id="modal-parking" hidden></span><span class="fact-sub" id="modal-meeting" hidden></span></div></div>
           <div class="fact-item"><span class="fact-icon"><i data-lucide="gauge" aria-hidden="true"></i></span><div><span class="fact-label">Difficulty</span><strong><span id="modal-difficulty" class="difficulty-badge badge-moderate">Moderate</span></strong></div></div>
         </div>
         <div class="steps steps-icons">
@@ -121,6 +121,7 @@
           <section class="step" aria-labelledby="equipment-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="backpack"></i></span><div class="step-head"><h3 id="equipment-heading">What to bring</h3></div><div id="modal-equipment" class="equipment-list"><span class="muted-copy">No equipment listed.</span></div></section>
           <section class="step" id="modal-weather-step" aria-labelledby="weather-heading" hidden><span class="step-marker" aria-hidden="true"><i data-lucide="cloud-sun"></i></span><div class="step-head"><h3 id="weather-heading">Forecast</h3></div><div id="modal-weather"></div></section>
           <section class="step" aria-labelledby="map-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="map"></i></span><div class="step-head"><h3 id="map-heading">Where</h3></div><div id="event-map" class="event-map" role="region" aria-label="Map showing task location"><div class="map-placeholder">The location map will appear here.</div></div>
+            <p class="map-legend" id="map-legend" hidden></p>
             <div class="map-links">
               <a id="map-directions" class="button button-sm button-primary" href="#" target="_blank" rel="noopener noreferrer"><i data-lucide="navigation" aria-hidden="true"></i><span>Get directions</span></a>
               <a id="modal-apple" class="text-link" href="#" target="_blank" rel="noopener noreferrer">Apple Maps</a>

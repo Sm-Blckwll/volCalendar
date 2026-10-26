@@ -104,8 +104,19 @@
 .leaflet-tile-pane { filter: var(--map-filter); }
 .leaflet-popup-content-wrapper { border-radius: var(--radius); box-shadow: var(--shadow-2); }
 .leaflet-popup-content { margin: var(--space-3) var(--space-4); font: 400 var(--text-md)/var(--leading-tight) var(--font-display); color: #212121; }
-.custom-map-marker { display: grid; place-items: center; width: 36px; height: 36px; color: #fff; background: var(--brand); border: 3px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: var(--shadow-2); transform: rotate(-45deg); }
-.custom-map-marker svg { width: 16px; height: 16px; transform: rotate(45deg); }
+/* Map markers: parking = blue dashed see-through circle with a P; meeting = the green pin (no marker image files). */
+.map-icon { background: none; border: 0; }
+.map-parking { display: grid; place-items: center; box-sizing: border-box; width: 36px; height: 36px; color: var(--map-parking-ink); background: var(--map-parking-fill); border: 2px dashed var(--map-parking); border-radius: var(--radius-full); box-shadow: 0 0 0 1px var(--map-halo); font: 700 18px/1 var(--font-body); text-shadow: 0 0 3px var(--map-halo), 0 0 3px var(--map-halo); }
+.map-pin-meet { display: block; position: relative; box-sizing: border-box; width: 36px; height: 36px; background: var(--brand); border: 3px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: var(--shadow-2); transform: rotate(-45deg); }
+.map-pin-meet::after { content: ""; position: absolute; inset: 0; margin: auto; width: 10px; height: 10px; background: #fff; border-radius: var(--radius-full); }
+.map-icon:focus-visible .map-parking, .map-icon:focus-visible .map-pin-meet { outline: 2px solid #212121; outline-offset: 3px; }
+/* The same two symbols, small, for the key under the map. */
+.place-badge { display: inline-grid; place-items: center; box-sizing: border-box; width: 20px; height: 20px; flex: none; color: var(--map-parking-text); background: var(--map-parking-fill); border: 2px dashed var(--map-parking); border-radius: var(--radius-full); font: 700 11px/1 var(--font-body); }
+.place-badge-sm { width: 18px; height: 18px; font-size: 10px; }
+.place-pin { display: inline-block; width: 12px; height: 12px; flex: none; background: var(--brand); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+.map-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 0; color: var(--text-muted); font-size: var(--text-xs); }
+.map-legend[hidden] { display: none; }
+.legend-item { display: inline-flex; align-items: center; gap: var(--space-2); }
 .map-inline-note { position: absolute; z-index: 1000; left: var(--space-3); right: var(--space-3); bottom: var(--space-3); padding: var(--space-2) var(--space-3); color: #212121; background: rgba(255, 255, 255, .96); border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--text-xs); }
 
 /* Responsive ------------------------------------------------------------------- */
