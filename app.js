@@ -802,7 +802,7 @@ function openEventModal(event) {
   const level = String(props.difficulty || '').trim();
   const levelEl = $('#modal-level');
   levelEl.hidden = !level;
-  levelEl.textContent = level ? `${level} difficulty` : '';
+  levelEl.textContent = level ? `${level} difficulty.` : '';
   $('#modal-date').textContent = `${formatDate(event.start, { weekday: 'long' })}, ${formatDate(event.start, { day: 'numeric', month: 'long' })}`;
   const places = placesOf(event);
   const parkLine = $('#modal-parking');

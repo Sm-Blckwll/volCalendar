@@ -100,6 +100,7 @@
   <footer class="site-footer">
     <button class="text-toggle" id="theme-toggle" type="button">Click to toggle dark mode</button>
     <button class="text-toggle" id="install-app" type="button" hidden>Install app</button>
+    <p class="app-stamp"><span id="app-version" data-stamp="version">v0.0.10✨</span><span class="app-stamp-sep" aria-hidden="true"> · </span><span id="app-updated" data-stamp="updated">Last updated: 26 Oct 2026, 17:25</span></p>
   </footer>
 
   <div class="modal-backdrop" id="event-modal" aria-hidden="true" hidden>
@@ -113,12 +114,12 @@
       </header>
       <div class="modal-body">
         <div class="steps steps-icons">
-          <section class="step" aria-labelledby="description-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="file-text"></i></span><div class="step-head"><h3 id="description-heading">About this task</h3></div><p id="modal-level" class="detail-level" hidden></p><p id="modal-description" class="detail-description">No description provided.</p></section>
+          <section class="step" aria-labelledby="description-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="file-text"></i></span><div class="step-head"><h3 id="description-heading">About this task</h3></div><p id="modal-description" class="detail-description">No description provided.</p><p id="modal-level" class="detail-level" hidden></p></section>
           <section class="step" aria-labelledby="equipment-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="backpack"></i></span><div class="step-head"><h3 id="equipment-heading">What to bring</h3></div><div id="modal-equipment" class="equipment-list"><span class="muted-copy">No equipment listed.</span></div></section>
           <section class="step" id="modal-weather-step" aria-labelledby="weather-heading" hidden><span class="step-marker" aria-hidden="true"><i data-lucide="cloud-sun"></i></span><div class="step-head"><h3 id="weather-heading">Forecast</h3></div><div id="modal-weather"></div></section>
           <section class="step" aria-labelledby="map-heading"><span class="step-marker" aria-hidden="true"><i data-lucide="map"></i></span><div class="step-head"><h3 id="map-heading">Where</h3></div><div class="where-body">
               <div class="where-places" id="modal-places">
-                <p class="where-line" id="modal-parking" hidden><span class="place-badge place-badge-sm" aria-hidden="true">P</span><span id="modal-parking-text"></span></p>
+                <p class="where-line" id="modal-parking" hidden><span id="modal-parking-text"></span></p>
                 <p class="where-line" id="modal-meeting" hidden><i class="place-pin" aria-hidden="true"></i><span id="modal-meeting-text"></span></p>
               </div>
               <div id="event-map" class="event-map" role="region" aria-label="Map showing task location"><div class="map-placeholder">The location map will appear here.</div></div>
