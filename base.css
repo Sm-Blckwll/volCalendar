@@ -217,6 +217,6 @@ textarea.input { min-height: 96px; resize: vertical; line-height: var(--leading-
 /* Footer theme toggle: plain small text link pinned to the bottom of the page. */
 body { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 main { flex: 1 0 auto; }
-.site-footer { margin-top: auto; padding: var(--space-4) var(--space-4) var(--space-6); text-align: center; }
+.site-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); margin-top: auto; padding: var(--space-4) var(--space-4) var(--space-6); text-align: center; }
 .text-toggle { padding: var(--space-1) var(--space-2); font: inherit; font-size: var(--text-sm); color: var(--text-muted); background: none; border: 0; border-radius: var(--radius-sm, 4px); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; transition: color var(--dur) var(--ease); }
 .text-toggle:hover { color: var(--brand-text); }

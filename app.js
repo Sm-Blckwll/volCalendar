@@ -1076,8 +1076,20 @@ function slugify(value) {
   return String(value ?? 'volunteer-task').toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'volunteer-task';
 }
 
+/** Offline support and "Install app" (Android/desktop). iPhone users use Share > Add to Home Screen. */
+function initialisePwa() {
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => { /* Offline support is optional. */ }));
+  }
+  const button = $('#install-app');
+  let prompt = null;
+  window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); prompt = event; button.hidden = false; });
+  button.addEventListener('click', async () => { if (!prompt) return; prompt.prompt(); await prompt.userChoice; prompt = null; button.hidden = true; });
+  window.addEventListener('appinstalled', () => { button.hidden = true; });
+}
 async function initialiseApp() {
   initialiseTheme();
+  initialisePwa();
   bindControls();
   refreshIcons();
   await loadSchedule();
